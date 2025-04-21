@@ -36,7 +36,7 @@
 
 #define UIP_DRIPADDR0   192
 #define UIP_DRIPADDR1   168
-#define UIP_DRIPADDR2   0
+#define UIP_DRIPADDR2   3
 #define UIP_DRIPADDR3   1
 
 #include <fcntl.h>
@@ -55,6 +55,9 @@
 #include <sys/ioctl.h>
 #include <linux/if.h>
 #include <linux/if_tun.h>
+#include <sys/capability.h>
+#include <linux/prctl.h>
+#include <sys/prctl.h>
 #define DEVTAP "/dev/net/tun"
 #else  /* linux */
 #define DEVTAP "/dev/tap0"
@@ -81,26 +84,69 @@ tapdev_init(void)
 #ifdef linux
   {
     struct ifreq ifr;
+    cap_t caps;
+    const cap_value_t cap_list[2] = { CAP_NET_ADMIN } ;
+    
+    /* To allow running as non-root user, run 'sudo setcap 'cap_net_admin,cap_net_raw+ep' ./uip' 
+       on the o/p executable each time it is built */
+    caps = cap_get_proc() ;
+    if ( !caps )
+    {
+    	perror("tapdev: tapdev_init: cap_get_proc" );
+    	exit(1);
+    }
+    if (cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_list, CAP_SET) == -1)
+    {
+      perror("tapdev: tapdev_init: cap_set_flag") ;
+      exit(1);
+    }
+    if (cap_set_flag(caps, CAP_INHERITABLE, 1, cap_list, CAP_SET) == -1)
+    {
+      perror("tapdev: tapdev_init: cap_set_flag") ;
+      exit(1);
+    }
+
+    if (cap_set_proc(caps) == -1)
+    {
+      perror("tapdev: tapdev_init: cap_set_proc") ;
+      exit(1);
+    }
+    if (cap_free(caps) == -1)
+    {
+    	perror("tapdev: tapdev_init: cap_free") ;
+    }
+    /* add to ambiant set to allow the permissions to persist across execv calls
+       when calling 'system' below to raise the interface */
+    if ( prctl(PR_CAP_AMBIENT,PR_CAP_AMBIENT_RAISE, CAP_NET_ADMIN,0,0) == -1 )
+    {
+    	perror("tapdev: tapdev_init: prctl") ;
+    	exit(1);
+    }
+    
     memset(&ifr, 0, sizeof(ifr));
     ifr.ifr_flags = IFF_TAP|IFF_NO_PI;
     if (ioctl(fd, TUNSETIFF, (void *) &ifr) < 0) {
-      perror(buf);
+      perror("tapdev: tapdev_init: ioctl");
       exit(1);
     }
   }
 #endif /* Linux */
 
-  snprintf(buf, sizeof(buf), "ifconfig tap0 inet %d.%d.%d.%d",
+  snprintf(buf, sizeof(buf), "/usr/sbin/ifconfig tap0 inet %d.%d.%d.%d",
 	   UIP_DRIPADDR0, UIP_DRIPADDR1, UIP_DRIPADDR2, UIP_DRIPADDR3);
-  system(buf);
-
+  if ( system(buf) )
+  {
+    perror("tapdev: tapdev_init: system");
+    exit(1);
+  }
 }
+
 /*---------------------------------------------------------------------------*/
 unsigned int
 tapdev_read(void)
 {
   fd_set fdset;
-  struct timeval tv, now;
+  struct timeval tv;
   int ret;
   
   tv.tv_sec = 0;

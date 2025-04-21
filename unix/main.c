@@ -35,7 +35,7 @@
  *
  */
 
-
+#include <stdio.h>
 #include "uip.h"
 #include "uip_arp.h"
 #include "tapdev.h"
@@ -62,9 +62,9 @@ main(void)
   tapdev_init();
   uip_init();
 
-  uip_ipaddr(ipaddr, 192,168,0,2);
+  uip_ipaddr(ipaddr, 192,168,3,2);
   uip_sethostaddr(ipaddr);
-  uip_ipaddr(ipaddr, 192,168,0,1);
+  uip_ipaddr(ipaddr, 192,168,3,1);
   uip_setdraddr(ipaddr);
   uip_ipaddr(ipaddr, 255,255,255,0);
   uip_setnetmask(ipaddr);
