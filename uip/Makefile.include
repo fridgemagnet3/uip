@@ -24,7 +24,7 @@ endif
 vpath %.c . ../uip ../lib $(APPDIRS)
 
 $(OBJECTDIR)/%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -o $@ -c $< 
 
 $(OBJECTDIR)/%.d: %.c
 	@set -e; rm -f $@; \
@@ -41,7 +41,7 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 uip.a: ${addprefix $(OBJECTDIR)/, $(UIP_SOURCES:.c=.o)}
-	$(AR) rcf $@ $^
+	$(AR) -c $@ $^
 
 apps.a: ${addprefix $(OBJECTDIR)/, $(APP_SOURCES:.c=.o)}
-	$(AR) rcf $@ $^
+	$(AR) -c $@ $^

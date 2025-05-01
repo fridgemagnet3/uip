@@ -24,7 +24,11 @@
  */
 #include "hello-world.h"
 #include "uip.h"
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
 #include <string.h>
+#endif
 
 /*
  * Declaration of the protosocket function that handles the connection

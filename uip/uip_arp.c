@@ -61,7 +61,11 @@
 
 #include "uip_arp.h"
 
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
 #include <string.h>
+#endif
 
 struct arp_hdr {
   struct uip_eth_hdr ethhdr;

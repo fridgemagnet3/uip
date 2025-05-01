@@ -33,8 +33,12 @@
  * $Id: psock.c,v 1.2 2006/06/12 08:00:30 adam Exp $
  */
 
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
 #include <stdio.h>
 #include <string.h>
+#endif
 
 #include "uipopt.h"
 #include "psock.h"
@@ -225,7 +229,7 @@ PT_THREAD(psock_generator_send(register struct psock *s,
   /* Call the generator function to generate the data in the
      uip_appdata buffer. */
   s->sendlen = generate(arg);
-  s->sendptr = uip_appdata;
+  s->sendptr = (const unsigned char*)uip_appdata;
 
   s->state = STATE_NONE;  
   do {

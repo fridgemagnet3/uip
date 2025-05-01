@@ -87,7 +87,11 @@
 #include "uip-neighbor.h"
 #endif /* UIP_CONF_IPV6 */
 
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
 #include <string.h>
+#endif
 
 /*---------------------------------------------------------------------------*/
 /* Variable definitions. */
@@ -237,7 +241,9 @@ struct uip_stats uip_stat;
 #endif /* UIP_STATISTICS == 1 */
 
 #if UIP_LOGGING == 1
+#ifndef _CMOC_VERSION_
 #include <stdio.h>
+#endif
 void uip_log(char *msg);
 #define UIP_LOG(m) uip_log(m)
 #else
@@ -287,7 +293,7 @@ chksum(u16_t sum, const u8_t *data, u16_t len)
   last_byte = data + len - 1;
   
   while(dataptr < last_byte) {	/* At least two more bytes */
-    t = (dataptr[0] << 8) + dataptr[1];
+    t = ((u16_t)dataptr[0] << 8) + dataptr[1];
     sum += t;
     if(sum < t) {
       sum++;		/* carry */
@@ -296,7 +302,7 @@ chksum(u16_t sum, const u8_t *data, u16_t len)
   }
   
   if(dataptr == last_byte) {
-    t = (dataptr[0] << 8) + 0;
+    t = ((u16_t)dataptr[0] << 8) + 0;
     sum += t;
     if(sum < t) {
       sum++;		/* carry */
@@ -853,8 +859,8 @@ uip_process(u8_t flag)
      the packet has been padded and we set uip_len to the correct
      value.. */
 
-  if((BUF->len[0] << 8) + BUF->len[1] <= uip_len) {
-    uip_len = (BUF->len[0] << 8) + BUF->len[1];
+  if(((u16_t)BUF->len[0] << 8) + BUF->len[1] <= uip_len) {
+    uip_len = ((u16_t)BUF->len[0] << 8) + BUF->len[1];
 #if UIP_CONF_IPV6
     uip_len += 40; /* The length reported in the IPv6 header is the
 		      length of the payload that follows the
@@ -1505,7 +1511,7 @@ uip_process(u8_t flag)
 	  } else if(opt == TCP_OPT_MSS &&
 		    uip_buf[UIP_TCPIP_HLEN + UIP_LLH_LEN + 1 + c] == TCP_OPT_MSS_LEN) {
 	    /* An MSS option with the right option length. */
-	    tmp16 = (uip_buf[UIP_TCPIP_HLEN + UIP_LLH_LEN + 2 + c] << 8) |
+	    tmp16 = ((u16_t)uip_buf[UIP_TCPIP_HLEN + UIP_LLH_LEN + 2 + c] << 8) |
 	      uip_buf[UIP_TCPIP_HLEN + UIP_LLH_LEN + 3 + c];
 	    uip_connr->initialmss =
 	      uip_connr->mss = tmp16 > UIP_TCP_MSS? UIP_TCP_MSS: tmp16;
@@ -1591,8 +1597,8 @@ uip_process(u8_t flag)
     } else {
       uip_urglen = 0;
 #else /* UIP_URGDATA > 0 */
-      uip_appdata = ((char *)uip_appdata) + ((BUF->urgp[0] << 8) | BUF->urgp[1]);
-      uip_len -= (BUF->urgp[0] << 8) | BUF->urgp[1];
+      uip_appdata = ((char *)uip_appdata) + (((u16_t)BUF->urgp[0] << 8) | BUF->urgp[1]);
+      uip_len -= ((u16_t)BUF->urgp[0] << 8) | BUF->urgp[1];
 #endif /* UIP_URGDATA > 0 */
     }
 
@@ -1866,7 +1872,7 @@ uip_process(u8_t flag)
   UIP_STAT(++uip_stat.tcp.sent);
  send:
   DEBUG_PRINTF("Sending packet with length %d (%d)\n", uip_len,
-	       (BUF->len[0] << 8) | BUF->len[1]);
+	       ((u16_t)BUF->len[0] << 8) | BUF->len[1]);
   
   UIP_STAT(++uip_stat.ip.sent);
   /* Return and let the caller do the actual transmission. */

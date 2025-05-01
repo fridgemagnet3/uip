@@ -40,8 +40,12 @@
  */
 
 #include "uip-neighbor.h"
+#ifndef _CMOC_VERSION_
 #include <stdio.h>
 #include <string.h>
+#else
+#include <cmoc.h>
+#endif
 
 #define MAX_TIME 128
 

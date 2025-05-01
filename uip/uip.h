@@ -59,6 +59,8 @@
  * Repressentation of an IP address.
  *
  */
+#ifndef _CMOC_VERSION_
+
 typedef u16_t uip_ip4addr_t[2];
 typedef u16_t uip_ip6addr_t[8];
 #if UIP_CONF_IPV6
@@ -66,6 +68,19 @@ typedef uip_ip6addr_t uip_ipaddr_t;
 #else /* UIP_CONF_IPV6 */
 typedef uip_ip4addr_t uip_ipaddr_t;
 #endif /* UIP_CONF_IPV6 */
+
+#else
+
+// CMOC doesn't allow redefining typedef's....
+typedef unsigned short uip_ip4addr_t[2];
+typedef unsigned short uip_ip6addr_t[8];
+#if UIP_CONF_IPV6
+typedef unsigned short uip_ipaddr_t[8];
+#else
+typedef unsigned short uip_ipaddr_t[2];
+#endif
+
+#endif
 
 /*---------------------------------------------------------------------------*/
 /* First, the functions that should be called from the
