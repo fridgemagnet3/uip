@@ -42,7 +42,7 @@ Next you'll need to build (under Linux) the [tap-slip-gw application](/tap-slip-
 `make`\
 `sudo setcap 'cap_net_admin+ep' ./tap-slip-gw`\
 
-That last step allows you to run the application as a normal user (instead of 'root'), if you're not fussed about security you can omit it and run as 'root' anyway. This application brings up a Linux TAP interface, then sends/receives packets to the XRoar serial port FIFOs (and hence to the uIP stack running in the emulator). The uIP binary itself is currently hardcoded to use an IP address of 192.168.3.2, with a gateway address of 192.168.3.1 so assuming that doesn't conflict with your network settings, should then just be a case of running the application as follows:
+That last step allows you to run the application as a normal user (instead of 'root'), if you're not fussed about security you can omit it and run as 'root' anyway. This application brings up a Linux TAP interface, then sends/receives packets to the XRoar serial port FIFOs using [SLIP](https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol) (and hence to the uIP stack running in the emulator). The uIP binary itself is currently hardcoded to use an IP address of 192.168.3.2, with a gateway address of 192.168.3.1 so assuming that doesn't conflict with your network settings, should then just be a case of running the application as follows:
 
 `./tap-slip-gw 192.168.3.1`
 
@@ -54,3 +54,8 @@ and get responses back from the Dragon.
 
 ![PXL_20250501_164229167](https://github.com/user-attachments/assets/ac6c7621-9615-4385-a421-4a6f26ad9ec3)
 
+## Will this work on the real hardware?
+
+It might but I'm skeptical.... At present, the serial port handling on the Dragon side is a very basic, polled implementation & I strongly suspect that unless you slow the baud rate down, it's liable to drop characters. Once I've done some more work proving the IP protocol handling is all working nicely, one of my jobs will be to replace this with an interrupt driven solution, till then I'm not planning on going near real hardware.
+
+Aside from that issue though, the transition should be relatively straightforward. You'll obviously need to make up a suitable serial cable but then it should just be a case of changing the [tap-slip-gw application](/tap-slip-gw) code to send/receive from the one file descriptor (connected to the serial port) rather than the two used with the FIFOs.
