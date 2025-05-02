@@ -13,7 +13,7 @@ int main(void)
   uip_ipaddr_t ipaddr;
   struct timer periodic_timer, arp_timer;
   // online random MAC generator! 
-  const u8_t mac_addr[] = { 0x00,0x10,0xfa,0x63,0x38,0x4a } ;
+  const u8_t mac_addr[] = { 0xa3,0x6f,0x6b,0xbb,0xc9,0xb9 } ;
   struct uip_eth_addr eth_mac_addr ;
   int i ;
   
