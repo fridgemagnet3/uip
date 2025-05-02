@@ -139,6 +139,14 @@ typedef unsigned short uip_stats_t;
  */
 #define UIP_CONF_STATISTICS      1
 
+/**
+ * Architecture specific overrides
+ *
+ */
+ 
+// we provide a custom 32 bit addition
+#define UIP_ARCH_ADD32
+
 /* Here we include the header file for the application(s) we use in
    our project. */
 /*#include "smtp.h"*/

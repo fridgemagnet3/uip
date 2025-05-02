@@ -250,7 +250,7 @@ void uip_log(char *msg);
 #define UIP_LOG(m)
 #endif /* UIP_LOGGING == 1 */
 
-#if ! UIP_ARCH_ADD32
+#ifndef UIP_ARCH_ADD32
 void
 uip_add32(u8_t *op32, u16_t op16)
 {
