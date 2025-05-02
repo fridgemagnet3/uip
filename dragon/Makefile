@@ -9,6 +9,7 @@ CC     = cmoc
 AR     = lwar
 APPS   = hello-world
 CFLAGS = -I../uip -I. --dragon -c
+ARFLAGS = -c
 LDFLAGS = --dragon --org=0x4000
 -include ../uip/Makefile.include
 

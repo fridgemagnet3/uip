@@ -69,11 +69,11 @@ main(void)
   uip_ipaddr(ipaddr, 255,255,255,0);
   uip_setnetmask(ipaddr);
 
-  httpd_init();
+  // httpd_init();
   
   /*  telnetd_init();*/
   
-  /*  hello_world_init();*/
+  hello_world_init();
 
   /*  {
       u8_t mac[6] = {1,2,3,4,5,6};
@@ -146,6 +146,7 @@ main(void)
       
       /* Call the ARP timer function every 10 seconds. */
       if(timer_expired(&arp_timer)) {
+      printf("ARP timer fired\n") ;
 	timer_reset(&arp_timer);
 	uip_arp_timer();
       }
