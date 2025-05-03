@@ -10,7 +10,9 @@ At present the plan is for this to (eventually) run on a Dragon 64, not specific
 
 ## Current status
 
-At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) and will respond to ping requests sent via a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP). The basic [hello world](apps/hello-world) application is currently built into code and sort of works but doesn't appear to pick up the response data properly - I've not investigated why just yet.
+At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) and will respond to ping requests sent via a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP). 
+
+Any application which uses the [protosockets library](doc/html/a00158.html) (including the default [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the select() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
 
 ## How to build/run the stack
 
@@ -21,7 +23,7 @@ The stack is currently built using the [CMOC 6809 cross compiler](http://sarrazi
 
 This results in a ~12K DragonDOS compatible binary file named UIP.BIN
 
-You'll also need [the XRoar emulator](/fridgemagnet3/xroar). Unfortunately the current XRoar releases don't emulate the Dragon 64's serial port, you'll therefore need to build my branch, which additionally only runs under Linux. This does a very basic emulation of the serial port, mapping read/write requests to two device files which are intended to be Linux FIFOs. As such, once you've built the emulator, you'll need to create these in the ~./xroar folder:
+You'll also need [the XRoar emulator](https://github.com/fridgemagnet3/xroar). Unfortunately the current XRoar releases don't emulate the Dragon 64's serial port, you'll therefore need to build my branch, which additionally only runs under Linux. This does a very basic emulation of the serial port, mapping read/write requests to two device files which are intended to be Linux FIFOs. As such, once you've built the emulator, you'll need to create these in the ~./xroar folder:
 
 `mkdir -p ~/.xroar`\
 `mkfifo ~./xroar/tx_uart`\
@@ -38,7 +40,7 @@ That last command loads, then runs the application.
 
 Next you'll need to build (under Linux) the [tap-slip-gw application](/tap-slip-gw):
 
-`cd tap-sli-gw`\
+`cd tap-slip-gw`\
 `make`\
 `sudo setcap 'cap_net_admin+ep' ./tap-slip-gw`\
 
