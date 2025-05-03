@@ -10,9 +10,9 @@ At present the plan is for this to (eventually) run on a Dragon 64, not specific
 
 ## Current status
 
-At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) and will respond to ping requests sent via a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP). 
+At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) and will respond to ping requests sent via a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP). The current configuration includes the telnet server application which can be successfully commuincated with, it doesn't do much mind aside from displaying the 'help' menu although I think there is more down to the other features not having been implemented rather than broken functionality. It does however serve to prove the TCP/IP protocol works.
 
-Any application which uses the [protosockets library](doc/html/a00158.html) (including the default [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the select() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
+Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the select() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
 
 ## How to build/run the stack
 
@@ -21,7 +21,7 @@ The stack is currently built using the [CMOC 6809 cross compiler](http://sarrazi
 `cd dragon`\
 `make`
 
-This results in a ~12K DragonDOS compatible binary file named UIP.BIN
+This results in a ~15K DragonDOS compatible binary file named UIP.BIN
 
 You'll also need [the XRoar emulator](https://github.com/fridgemagnet3/xroar). Unfortunately the current XRoar releases don't emulate the Dragon 64's serial port, you'll therefore need to build my branch, which additionally only runs under Linux. This does a very basic emulation of the serial port, mapping read/write requests to two device files which are intended to be Linux FIFOs. As such, once you've built the emulator, you'll need to create these in the ~./xroar folder:
 
@@ -31,9 +31,9 @@ You'll also need [the XRoar emulator](https://github.com/fridgemagnet3/xroar). U
 
 Every character then written to the serial port on the Dragon, will then be sent to the **tx_uart** file. Anything sent to the **rx_uart** file from the Linux side will then appear on the serial port. 
 
-You then need to load the uIP binary image into the emulator. There are various ways of accomplishing this, including writing it to a virtual disk image, for ease of use I use an instance of Drivewire with the [Becker port](https://www.6809.org.uk/xroar/doc/xroar.shtml#Becker-port-options). At present, with the image being ~12Kbytes in size, I currently target this at the 16K address offset which then gives a reasonable bit of room for growth - something like:
+You then need to load the uIP binary image into the emulator. There are various ways of accomplishing this, including writing it to a virtual disk image, for ease of use I use an instance of Drivewire with the [Becker port](https://www.6809.org.uk/xroar/doc/xroar.shtml#Becker-port-options). At present, with the image being ~15Kbytes in size, I currently target this at the 12K address offset which then gives a reasonable bit of room for growth - something like:
 
-`CLEAR 1000,&H4000`\
+`CLEAR 1000,&H3000`\
 `DLOAD "UIP.BIN`
 
 That last command loads, then runs the application.
