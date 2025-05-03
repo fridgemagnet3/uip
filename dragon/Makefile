@@ -7,10 +7,10 @@ all: UIP.BIN
 
 CC     = cmoc
 AR     = lwar
-APPS   = hello-world
-CFLAGS = -I../uip -I. --dragon -c
+APPS   = telnetd
+CFLAGS = -I../uip -I../lib -I. --dragon -c
 ARFLAGS = -c
-LDFLAGS = --dragon --org=0x4000
+LDFLAGS = --dragon --org=0x3000
 -include ../uip/Makefile.include
 
 UIP.BIN: $(addprefix $(OBJECTDIR)/, main.o clock-arch.o slipdev.o uip_arch.o) apps.a uip.a

@@ -34,8 +34,8 @@ all: uip
 
 CC     = gcc
 AR     = ar
-APPS   = hello-world
-CFLAGS = -Wall -g -I../uip -I. -fpack-struct -Os -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-variable
+APPS   = telnetd
+CFLAGS = -Wall -g -I../uip -I../lib -I. -fpack-struct -Os -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-variable
 -include ../uip/Makefile.include
 ARFLAGS = rcf
 uip: $(addprefix $(OBJECTDIR)/, main.o tapdev.o clock-arch.o) apps.a uip.a -lcap

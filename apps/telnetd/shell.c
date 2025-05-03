@@ -33,8 +33,11 @@
  */
 
 #include "shell.h"
-
+#ifndef _CMOC_VERSION_
 #include <string.h>
+#else
+#include <cmoc.h>
+#endif
 
 struct ptentry {
   char *commandstr;

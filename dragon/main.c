@@ -38,7 +38,9 @@ int main(void)
   uip_ipaddr(ipaddr, 255,255,255,0);
   uip_setnetmask(ipaddr);
 
-  hello_world_init();
+  telnetd_init();
+  //webclient_init();
+  
   printf( "Entering main loop\n" ) ;
   while(1)
   {

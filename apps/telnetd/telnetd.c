@@ -37,7 +37,11 @@
 #include "memb.h"
 #include "shell.h"
 
+#ifndef _CMOC_VERSION_
 #include <string.h>
+#else
+#include <cmoc.h>
+#endif
 
 #define ISO_nl       0x0a
 #define ISO_cr       0x0d
@@ -45,7 +49,18 @@
 struct telnetd_line {
   char line[TELNETD_CONF_LINELEN];
 };
+
+#ifndef _CMOC_VERSION_
+// this doesn't work with the CMOC compiler,
+// possibly because of limitations with macro string concatenation...
 MEMB(linemem, struct telnetd_line, TELNETD_CONF_NUMLINES);
+#else
+// this is (for the most part) what the MEMB macro does, with the
+// initialisation of 'linemem' performed in 'telnetd_init'
+static char linemem_memb_count[TELNETD_CONF_NUMLINES];
+static struct telnetd_line linemem_memb_mem[TELNETD_CONF_NUMLINES];
+static struct memb_blocks linemem ;
+#endif
 
 #define STATE_NORMAL 0
 #define STATE_IAC    1
@@ -66,7 +81,7 @@ static struct telnetd_state s;
 static char *
 alloc_line(void)
 {
-  return memb_alloc(&linemem);
+  return (char*)memb_alloc(&linemem);
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -137,6 +152,15 @@ void
 telnetd_init(void)
 {
   uip_listen(HTONS(23));
+
+#ifdef _CMOC_VERSION_
+  // do the structure init that is normally performed by the 'MEMB' macro
+  linemem.size = sizeof(struct telnetd_line) ;
+  linemem.num = TELNETD_CONF_NUMLINES ;
+  linemem.count = linemem_memb_count ;
+  linemem.mem = (void *)linemem_memb_mem ;
+#endif
+
   memb_init(&linemem);
   shell_init();
 }
@@ -162,7 +186,7 @@ senddata(void)
   static char *bufptr, *lineptr;
   static int buflen, linelen;
   
-  bufptr = uip_appdata;
+  bufptr = (char*)uip_appdata;
   buflen = 0;
   for(s.numsent = 0; s.numsent < TELNETD_CONF_NUMLINES &&
 	s.lines[s.numsent] != NULL ; ++s.numsent) {

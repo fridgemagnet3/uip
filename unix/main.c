@@ -71,9 +71,9 @@ main(void)
 
   // httpd_init();
   
-  /*  telnetd_init();*/
+    telnetd_init();
   
-  hello_world_init();
+  //hello_world_init();
 
   /*  {
       u8_t mac[6] = {1,2,3,4,5,6};

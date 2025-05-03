@@ -43,7 +43,11 @@
  * Memory block allocation routines.
  * \author Adam Dunkels <adam@sics.se>
  */
+#ifndef _CMOC_VERSION_
 #include <string.h>
+#else
+#include <cmoc.h>
+#endif
 
 #include "memb.h"
 
