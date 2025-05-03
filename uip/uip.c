@@ -366,11 +366,15 @@ uip_icmp6chksum(void)
 }
 #endif /* UIP_CONF_IPV6 */
 /*---------------------------------------------------------------------------*/
+
+#ifndef UIP_ARCH_TCPCHKSUM
 u16_t
 uip_tcpchksum(void)
 {
   return upper_layer_chksum(UIP_PROTO_TCP);
 }
+#endif
+
 /*---------------------------------------------------------------------------*/
 #if UIP_UDP_CHECKSUMS
 u16_t

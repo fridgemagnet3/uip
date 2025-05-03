@@ -10,6 +10,8 @@
  * uIP has a number of configuration options that can be overridden
  * for each project. These are kept in a project-specific uip-conf.h
  * file and all configuration names have the prefix UIP_CONF.
+ *
+ * Configuration for the Dragon...
  */
 
 /*
@@ -145,7 +147,11 @@ typedef unsigned short uip_stats_t;
  */
  
 // we provide a custom 32 bit addition
-#define UIP_ARCH_ADD32
+#define UIP_ARCH_ADD32 1
+// we provide a custom IP checksum
+#define UIP_ARCH_IPCHKSUM 1
+// and a custom TCP checksum
+#define UIP_ARCH_TCPCHKSUM 1
 
 /* Here we include the header file for the application(s) we use in
    our project. */
