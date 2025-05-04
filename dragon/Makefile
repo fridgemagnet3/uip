@@ -7,7 +7,7 @@ all: UIP.BIN
 
 CC     = cmoc
 AR     = lwar
-APPS   = telnetd
+APPS   = telnetd solar-udp
 CFLAGS = -I../uip -I../lib -I. --dragon -c
 ARFLAGS = -c
 LDFLAGS = --dragon --org=0x3000

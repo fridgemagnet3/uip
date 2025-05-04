@@ -34,7 +34,7 @@ all: uip
 
 CC     = gcc
 AR     = ar
-APPS   = telnetd
+APPS   = telnetd solar-udp
 CFLAGS = -Wall -g -I../uip -I../lib -I. -fpack-struct -Os -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-variable
 -include ../uip/Makefile.include
 ARFLAGS = rcf

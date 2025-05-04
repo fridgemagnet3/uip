@@ -39,7 +39,7 @@ int main(void)
   uip_setnetmask(ipaddr);
 
   telnetd_init();
-  //webclient_init();
+  solar_udp_init() ;
   
   printf( "Entering main loop\n" ) ;
   while(1)
@@ -88,11 +88,26 @@ int main(void)
 	      slipdev_send();
 	    }
 	  }
+	  
+#ifdef UIP_UDP
+      for(i = 0; i < UIP_UDP_CONNS; i++) 
+      {
+        uip_udp_periodic(i);
+	    /* If the above function invocation resulted in data that
+	       should be sent out on the network, the global variable
+	       uip_len is set to a value > 0. */
+	    if(uip_len > 0) 
+	    {
+	      uip_arp_out();
+	      slipdev_send();
+	    }
+	  }
+#endif /* UIP_UDP */
 	}
     /* Call the ARP timer function every 10 seconds. */
     if(timer_expired(&arp_timer)) 
     {
-      printf("ARP timer fired\n") ;
+      //printf("ARP timer fired\n") ;
 	  timer_reset(&arp_timer);
 	  uip_arp_timer();
     }  

@@ -71,8 +71,8 @@ main(void)
 
   // httpd_init();
   
-    telnetd_init();
-  
+  telnetd_init();
+  solar_udp_init() ;
   //hello_world_init();
 
   /*  {
