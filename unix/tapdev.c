@@ -85,9 +85,9 @@ tapdev_init(void)
   {
     struct ifreq ifr;
     cap_t caps;
-    const cap_value_t cap_list[2] = { CAP_NET_ADMIN } ;
+    const cap_value_t cap_list[1] = { CAP_NET_ADMIN } ;
     
-    /* To allow running as non-root user, run 'sudo setcap 'cap_net_admin,cap_net_raw+ep' ./uip' 
+    /* To allow running as non-root user, run 'sudo setcap 'cap_net_admin+ep' ./uip' 
        on the o/p executable each time it is built */
     caps = cap_get_proc() ;
     if ( !caps )
