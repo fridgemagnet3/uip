@@ -132,7 +132,7 @@ tapdev_init(void)
   }
 #endif /* Linux */
 
-  snprintf(buf, sizeof(buf), "/usr/sbin/ifconfig tap0 inet %d.%d.%d.%d",
+  snprintf(buf, sizeof(buf), "/sbin/ifconfig tap0 inet %d.%d.%d.%d",
 	   UIP_DRIPADDR0, UIP_DRIPADDR1, UIP_DRIPADDR2, UIP_DRIPADDR3);
   if ( system(buf) )
   {
