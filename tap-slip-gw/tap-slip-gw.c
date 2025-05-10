@@ -33,7 +33,7 @@ int open_tap_dev(const char *ip_addr)
 {
   struct ifreq ifr;
   cap_t caps;
-  const cap_value_t cap_list[2] = { CAP_NET_ADMIN } ;
+  const cap_value_t cap_list[1] = { CAP_NET_ADMIN } ;
     
   /* To allow running as non-root user, run 'sudo setcap 'cap_net_admin+ep' ./tap-slip-gw' 
      on the o/p executable each time it is built */
@@ -133,13 +133,15 @@ int open_xroar_uart_fifos(int *tx_fd, int *rx_fd)
   }
 }
 
-static int tx_slip_pkt(int fd, const uint8_t *pkt, const int size)
+static int tx_slip_pkt(int fd, const uint8_t *pkt, const int size, useconds_t tx_delay)
 {
   int rc ;
   int i ;
   const uint8_t *ptr = pkt ;
   uint8_t c ;
   
+  //printf("tx_slip_pkt: %d\n",size) ;
+
   rc = write(fd,&slip_end,1) ;
   if ( rc < 0 )
   {
@@ -153,18 +155,28 @@ static int tx_slip_pkt(int fd, const uint8_t *pkt, const int size)
     {
       case SLIP_END:
         rc = write(fd,&slip_esc,1);
+        usleep(tx_delay) ;
         if ( rc > 0 )
+        {
           rc = write(fd,&slip_esc_end,1);
+          usleep(tx_delay) ;
+        }
         break;
       case SLIP_ESC:
         rc = write(fd,&slip_esc,1) ;
+        usleep(tx_delay) ;
         if ( rc > 0 )
+        {
           rc = write(fd,&slip_esc_esc,1);
+          usleep(tx_delay) ;
+        }
         break;
       default:
         rc = write(fd,&c,1) ;
+        usleep(tx_delay) ;
         break;
-    }    
+    }
+    
     if ( rc < 0 )
     {
       perror("tx_slip_pkt");
@@ -172,6 +184,7 @@ static int tx_slip_pkt(int fd, const uint8_t *pkt, const int size)
     }
   }
   rc = write(fd,&slip_end,1) ;
+  usleep(tx_delay) ;
   if ( rc < 0 )
   {
     perror("tx_slip_pkt") ;
@@ -188,6 +201,7 @@ static int rx_slip_pkt(int fd, uint8_t *pktbuf, const int bufsz)
   uint8_t *ptr = pktbuf ;
   bool eof_pkt = false ;
   
+  //printf("rx_slip_pkt\n" ) ;
   while(!eof_pkt)
   {
     if ( len == bufsz )
@@ -221,7 +235,7 @@ static int rx_slip_pkt(int fd, uint8_t *pktbuf, const int bufsz)
                 break ;
             }
           }
-                  
+                
         default:
         
           *ptr++ = c ;
@@ -230,7 +244,7 @@ static int rx_slip_pkt(int fd, uint8_t *pktbuf, const int bufsz)
       }
     }
 
-    if ( rc <= 0 )
+    if ( rc < 0 )
     {
       perror("rx_slip_pkt") ;
       len = -1 ;
@@ -243,20 +257,48 @@ static int rx_slip_pkt(int fd, uint8_t *pktbuf, const int bufsz)
 
 int main(int argc, char *argv[] )
 {
+  useconds_t uart_delay = 0 ;
+
   if ( argc < 2 )
   {
-    printf("Usage: tap-slip-gw <host-ip>\n" ) ;
+    printf("Usage: tap-slip-gw <host-ip> {tx-delay[us]} {comms-dev}\n" ) ;
     return -1 ;
   }
   int tap_fd = open_tap_dev(argv[1]) ;
   if ( tap_fd < 0 )
     return -1 ;
-    
-  int xroar_tx_fifo, xroar_rx_fifo ;
-  if ( open_xroar_uart_fifos ( &xroar_tx_fifo, &xroar_rx_fifo) < 0 )
+
+  if ( argc > 2 )
   {
-    close(tap_fd) ;
-    return -1 ;
+    // When testing the serial driver on the Dragon side, 
+    // sending all the data as fast as possible isn't representative 
+    // so this allows the injection of a short delay between each character.
+    // Using a figure of ~1000 gives a latency similar to that seen on
+    // the real hardware running at 19200 baud
+    uart_delay = strtoul(argv[2],NULL,10) ;
+  }
+      
+  int xroar_tx_fifo, xroar_rx_fifo ;
+  if ( argc < 4 )
+  {
+    if ( open_xroar_uart_fifos ( &xroar_tx_fifo, &xroar_rx_fifo) < 0 )
+    {
+      close(tap_fd) ;
+      return -1 ;
+    }
+  }
+  else
+  {
+    // allow a specific device to be used (eg. serial) instead of the Xroar
+    // FIFOs ie. for communicating with real hardware
+    xroar_tx_fifo = open(argv[3], O_RDWR ) ;
+    if ( xroar_tx_fifo < 0 )
+    {
+      perror("device open" ) ;
+      close(tap_fd);
+      return -1 ;
+    }
+    xroar_rx_fifo = xroar_tx_fifo ;
   }
   
   fd_set fdset;
@@ -265,7 +307,7 @@ int main(int argc, char *argv[] )
   int rc ;
   
   printf("Starting..\n") ;
-  
+
   if ( tap_fd > xroar_rx_fifo )
     max_fd = tap_fd ;
   else
@@ -293,10 +335,10 @@ int main(int argc, char *argv[] )
         else
         {
           // send it to the xroar fifo
-          rc = tx_slip_pkt(xroar_tx_fifo,pktbuf,rc) ;
+          rc = tx_slip_pkt(xroar_tx_fifo,pktbuf,rc,uart_delay) ;
         }
       }
-      else if ( FD_ISSET(xroar_rx_fifo,&fdset) )
+      if ( FD_ISSET(xroar_rx_fifo,&fdset) )
       {
         // data has been received on the xroar fifo
         rc = rx_slip_pkt(xroar_rx_fifo, pktbuf, sizeof(pktbuf));
