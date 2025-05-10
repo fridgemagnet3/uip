@@ -101,6 +101,13 @@ slipdev_send(void)
   u8_t *ptr;
   u8_t c;
 
+#ifdef SERIAL_DRIVER
+  // deassert DTR for sends over half the ring buffer size
+  // to reduce overruns
+  if ( uip_len > (RX_RING_BUFZ/2) )
+    clear_dtr() ;
+#endif
+
   serial_put(slip_end);
 
   ptr = uip_buf;
@@ -121,6 +128,11 @@ slipdev_send(void)
     }
   }
   serial_put(slip_end);
+
+#ifdef SERIAL_DRIVER
+  if ( uip_len > (RX_RING_BUFZ/2) )
+    set_dtr() ;
+#endif
 }
 /*-----------------------------------------------------------------------------------*/
 unsigned int slipdev_read(void)

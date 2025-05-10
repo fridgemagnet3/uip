@@ -6,6 +6,9 @@
 
 // interrupt driven serial driver for the 6551
 
+// sizeof the serial RX ring buffer
+#define RX_RING_BUFZ 256
+
 void serial_init(void) ;
 
 // indicates if RX data is available
@@ -22,5 +25,11 @@ u8_t serial_get(void) ;
 
 // return no. of RX overruns
 u8_t serial_overruns(void) ;
+
+// assert DTR
+void set_dtr(void) ;
+
+// de-assert DTR 
+void clear_dtr(void) ;
 
 #endif

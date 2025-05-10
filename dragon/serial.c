@@ -1,32 +1,43 @@
 #include <cmoc.h>
 #include "serial.h"
 
-/* Interrupt driven serial driver for the 6551. This (currently) 
+/* Interrupt driven serial driver for the 6551. This  
    provides a 256 byte receive ring buffer which is populated by
    the interrupt handler. 
-   With limited testing, this works quite nicely 99% of the time
-   (although the emulator is more prone to overruns than the real
-   thing but that's probably more because the simulated txmit
-   rate is higher than the real thing). 
-   Where sporadic overruns start showing up is when the Dragon 
-   performs large packet receives/sends at the same time eg.
+   
+   When used with the emulator, you need to throttle back the
+   transmit rate through the RX FIFO (see 'tap-slip-gw) otherwise
+   you'll overwhelm it and trigger massive overruns. Using a 
+   figure of 1000 as the tx-delay(us) seems to yield roughly the 
+   same ping times as when connected to a real Dragon @19200 baud
+   however even then you'll see get sporadic overruns, particularly
+   during the burst of traffic at startup.
+   
+   On the real hardware, with 3-wire serial this works quite nicely
+   99% of the time, where sporadic overruns start showing up is when 
+   the Dragon performs large packet receives/sends at the same time eg.
    doing 'ping' requests with increased payload sizes although
    it's really not until you hit the 1KB threshold they start
-   becoming more prominent. This is most likely helped by the
+   becoming more prominent. In part, this is helped by the
    tap-slip-gw app which is single threaded and blocks till a
    transmit packet has fully been received ie. no sends will
    be occurring during that window. So it's very much down to
    timing as in a large packet has just been sent at the point
-   the Dragon is commencing a similarly large response. */
-
-// sizeof the serial RX ring buffer
-#define RX_RING_BUFZ 256
+   the Dragon is commencing a similarly large response. 
+   
+   If hardware flow control is used (DTR from the Dragon connected to
+   CTS on the Linux side) AND enabled on the Linux side, the SLIP
+   driver de-asserts DTR when performing a send of a packet greater
+   than half the ring buffer size which should stop the Linux side
+   sending during that period. In this mode, I've seen no overruns */
 
 // status bits for TX full in the 6551
 #define STAT_TX (1<<4)
+#define CMD_DTR (1)
 
 static u8_t *sy6551_holding = (u8_t*)0xff04 ;
 static u8_t *sy6551_status = (u8_t*)0xff05 ;
+static u8_t *sy6551_cmd = (u8_t*)0xff06 ;
 
 // RX ring buffer 
 u8_t rx_ring_buffer[RX_RING_BUFZ] ;
@@ -107,3 +118,12 @@ u8_t serial_overruns(void)
   return c ;
 }
 
+void set_dtr(void)
+{
+  *sy6551_cmd = (*sy6551_cmd) | CMD_DTR ;
+}
+
+void clear_dtr(void)
+{
+  *sy6551_cmd = (*sy6551_cmd) & (~CMD_DTR) ;
+}
