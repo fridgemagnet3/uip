@@ -107,7 +107,7 @@ int main(void)
     /* Call the ARP timer function every 10 seconds. */
     if(timer_expired(&arp_timer)) 
     {
-      //printf("ARP timer fired\n") ;
+      printf("ARP timer fired\n") ;
 	  timer_reset(&arp_timer);
 	  uip_arp_timer();
     }  

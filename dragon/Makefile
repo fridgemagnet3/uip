@@ -10,10 +10,13 @@ AR     = lwar
 APPS   = telnetd solar-udp
 CFLAGS = -I../uip -I../lib -I. --dragon -c
 ARFLAGS = -c
-LDFLAGS = --dragon --org=0x3000
+LDFLAGS = --dragon --org=0x2000
 -include ../uip/Makefile.include
 
-UIP.BIN: $(addprefix $(OBJECTDIR)/, main.o clock-arch.o slipdev.o uip_arch.o) apps.a uip.a
+$(OBJECTDIR)/%.o: %.s
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+UIP.BIN: $(addprefix $(OBJECTDIR)/, main.o clock-arch.o slipdev.o uip_arch.o serial.o sy6551_int_handler.o) apps.a uip.a
 	$(CC) $(LDFLAGS) -o $@ $^
 	# needed to load via Drivewire
 	./pad256.sh $@

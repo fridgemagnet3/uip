@@ -38,43 +38,53 @@
  */
 
 #include "slipdev.h"
+#ifdef SERIAL_DRIVER
+#include "serial.h"
+#include <cmoc.h>
+#endif
 
 #define SLIP_END     0300
 #define SLIP_ESC     0333
 #define SLIP_ESC_END 0334
 #define SLIP_ESC_ESC 0335
 
+#ifndef SERIAL_DRIVER
+
+// routines for sending & receiving data in simple
+// polled mode, primarily only works when running 
+// in emulation
 #define STAT_RX (1<<3)
 #define STAT_TX (1<<4)
 
 static u8_t *sy6551_holding = (u8_t*)0xff04 ;
 static u8_t *sy6551_status = (u8_t*)0xff05 ;
 
-static u8_t rx_pending(void)
+static u8_t serial_rx_pending(void)
 {
   return (*sy6551_status) & STAT_RX ; 
 }
 
-static u8_t tx_empty(void)
+static u8_t serial_get(void)
 {
-  return (*sy6551_status) & STAT_TX ; 
-}
-
-static void rs232_put(u8_t c)
-{
-  while(!tx_empty() )
-  {
-  }
-  *sy6551_holding = c ;
-}
-
-static u8_t rs232_get(void)
-{
-  while(!rx_pending() )
+  while(!serial_rx_pending() )
   {
   }
   return *sy6551_holding ;
 }
+
+static u8_t serial_tx_empty(void)
+{
+  return (*sy6551_status) & STAT_TX ; 
+}
+
+static void serial_put(u8_t c)
+{
+  while(!serial_tx_empty() )
+  {
+  }
+  *sy6551_holding = c ;
+}
+#endif
 
 #define MAX_SIZE UIP_BUFSIZE
 
@@ -87,45 +97,52 @@ static const unsigned char slip_end = SLIP_END,
 void
 slipdev_send(void)
 {
-  u8_t i;
+  u16_t i;
   u8_t *ptr;
   u8_t c;
 
-  rs232_put(slip_end);
+  serial_put(slip_end);
 
   ptr = uip_buf;
   for(i = 0; i < uip_len; i++) {
     c = *ptr++;
     switch(c) {
     case SLIP_END:
-      rs232_put(slip_esc);
-      rs232_put(slip_esc_end);
+      serial_put(slip_esc);
+      serial_put(slip_esc_end);
       break;
     case SLIP_ESC:
-      rs232_put(slip_esc);
-      rs232_put(slip_esc_esc);
+      serial_put(slip_esc);
+      serial_put(slip_esc_esc);
       break;
     default:
-      rs232_put(c);
+      serial_put(c);
       break;
     }
   }
-  rs232_put(slip_end);
+  serial_put(slip_end);
 }
 /*-----------------------------------------------------------------------------------*/
 unsigned int slipdev_read(void)
 {
   u8_t c;
 
- if ( !rx_pending() )
+ if ( !serial_rx_pending() )
    return 0 ;
+
+#ifdef SERIAL_DRIVER
+  u8_t overruns = serial_overruns() ;
+  if ( overruns )
+    printf("serial overruns: %u\n", overruns ) ;
+#endif
+
  start:
   uip_len = 0;
   while(1) {
     if(uip_len >= MAX_SIZE) {
       goto start;
     }
-    c = rs232_get();
+    c = serial_get();
     switch(c) {
     case SLIP_END:
       if(uip_len > 0) {
@@ -135,7 +152,7 @@ unsigned int slipdev_read(void)
       }
       break;
     case SLIP_ESC:
-      c = rs232_get();
+      c = serial_get();
       switch(c) {
       case SLIP_ESC_END:
         c = SLIP_END;
@@ -161,5 +178,8 @@ unsigned int slipdev_read(void)
 void
 slipdev_init(void)
 {
+#ifdef SERIAL_DRIVER
+  serial_init();
+#endif
 }
 /*-----------------------------------------------------------------------------------*/
