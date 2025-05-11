@@ -8,9 +8,10 @@ all: UIP.BIN
 CC     = cmoc
 AR     = lwar
 APPS   = telnetd solar-udp
-CFLAGS = -I../uip -I../lib -I. --dragon -c
+CFLAGS+= -I../uip -I../lib -I. --dragon -c
+#CFLAGS+= -DSERIAL_DRIVER
 ARFLAGS = -c
-LDFLAGS = --dragon --org=0x2000
+LDFLAGS+= --dragon --org=0x2000
 -include ../uip/Makefile.include
 
 $(OBJECTDIR)/%.o: %.s
