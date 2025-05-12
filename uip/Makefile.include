@@ -40,8 +40,8 @@ ifneq ($(MAKECMDGOALS),clean)
                                    $(APP_SOURCES:.c=.d))
 endif
 
-uip.a: ${addprefix $(OBJECTDIR)/, $(UIP_SOURCES:.c=.o)}
+libuip.a: ${addprefix $(OBJECTDIR)/, $(UIP_SOURCES:.c=.o)}
 	$(AR) $(ARFLAGS) $@ $^
 
-apps.a: ${addprefix $(OBJECTDIR)/, $(APP_SOURCES:.c=.o)}
+libapps.a: ${addprefix $(OBJECTDIR)/, $(APP_SOURCES:.c=.o)}
 	$(AR) $(ARFLAGS) $@ $^

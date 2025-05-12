@@ -38,7 +38,7 @@ APPS   = telnetd solar-udp
 CFLAGS+= -Wall -g -I../uip -I../lib -I. -fpack-struct -Os -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-variable
 -include ../uip/Makefile.include
 ARFLAGS = rcf
-uip: $(addprefix $(OBJECTDIR)/, main.o tapdev.o clock-arch.o) apps.a uip.a -lcap
+uip: $(addprefix $(OBJECTDIR)/, main.o tapdev.o clock-arch.o) libapps.a libuip.a -lcap
 
 clean:
 	rm -fr *.o *~ *core uip $(OBJECTDIR) *.a
