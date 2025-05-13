@@ -71,10 +71,11 @@ static void display_json_solar_data(char *json_data)
       ptr = strchr(delim+len,':') ;
       if ( ptr )
       {
+        ptr++ ;
         // the cmoc string to number routines don't seem to
         // like leading spaces...
-        //while(!isalnum(*ptr) && (*ptr))
-          ptr+=2 ;
+        while((*ptr==' ') || (*ptr=='\t'))
+          ptr++ ;
         // find and decode matches of interest
         if ( !strcmp(name,"dataTimestamp") )
         {
