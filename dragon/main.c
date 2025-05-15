@@ -38,8 +38,12 @@ int main(void)
   uip_ipaddr(ipaddr, 255,255,255,0);
   uip_setnetmask(ipaddr);
 
+#ifdef APP_TELNETD
   telnetd_init();
+#endif
+#ifdef APP_SOLARUDP
   solar_udp_init() ;
+#endif
   
   printf( "Entering main loop\n" ) ;
   while(1)

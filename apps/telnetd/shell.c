@@ -38,9 +38,12 @@
 #else
 #include <cmoc.h>
 #endif
+#ifdef APP_SOLARUDP
+#include "solar-udp.h"
+#endif
 
 struct ptentry {
-  char *commandstr;
+  const char *commandstr;
   void (* pfunc)(char *str);
 };
 
@@ -59,29 +62,19 @@ parse(register char *str, struct ptentry *t)
 
   p->pfunc(str);
 }
-/*---------------------------------------------------------------------------*/
-static void
-inttostr(register char *str, unsigned int i)
-{
-  str[0] = '0' + i / 100;
-  if(str[0] == '0') {
-    str[0] = ' ';
-  }
-  str[1] = '0' + (i / 10) % 10;
-  if(str[0] == ' ' && str[1] == '0') {
-    str[1] = ' ';
-  }
-  str[2] = '0' + i % 10;
-  str[3] = ' ';
-  str[4] = 0;
-}
+
 /*---------------------------------------------------------------------------*/
 static void
 help(char *str)
 {
   shell_output("Available commands:", "");
+#if UIP_STATISTICS  
   shell_output("stats   - show network statistics", "");
   shell_output("conn    - show TCP connections", "");
+#endif
+#ifdef APP_SOLARUDP
+  shell_output("solar   - show solar data", "");
+#endif
   shell_output("help, ? - show help", "");
   shell_output("exit    - exit shell", "");
 }
@@ -93,10 +86,29 @@ unknown(char *str)
     shell_output("Unknown command: ", str);
   }
 }
+
+#ifdef APP_SOLARUDP
+static void shell_output_solar(const char *str)
+{
+  shell_output(str,"") ;
+}
+
+static void solar(char *str)
+{
+  output_solar_metrics(shell_output_solar);
+}
+#endif
+
 /*---------------------------------------------------------------------------*/
 static struct ptentry parsetab[] =
-  {{"stats", help},
+  {
+#if UIP_STATISTICS  
+   {"stats", help},
    {"conn", help},
+#endif
+#ifdef APP_SOLARUDP
+   {"solar", solar},
+#endif
    {"help", help},
    {"exit", shell_quit},
    {"?", help},

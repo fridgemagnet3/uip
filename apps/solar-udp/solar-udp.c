@@ -48,16 +48,25 @@ static int extract_quoted_string(const char *src, char *dst)
   return -1 ;
 }
 
+static void display_str(const char *str)
+{
+#ifdef _CMOC_VERSION_
+  putstr(str,strlen(str)) ;
+#else
+  fputs(str,stdout);
+#endif
+}
+
 static void display_json_solar_data(char *json_data)
 {
   char *delim, *ptr ;
   char name[100] ;
   char val[100] ;
   int len ;
-  struct tm *data_tm ;
   u8_t toks = 0 ;
   const u8_t sol_toks = 7 ;
-
+  time_t timestamp ;
+  
   // a very rough and ready JSON parser for the solar data..
   
   // break the string at each comma, this gives us each JSON name/value pair 
@@ -84,7 +93,10 @@ static void display_json_solar_data(char *json_data)
             // we don't have a 64-bit data type so this needs to be converted to a float
             // before storing in a 32-bit long
             float f = strtof(val,NULL);
-            SolarData.dataTimeStamp = (time_t)(f / 1000) ;
+            timestamp = (time_t)(f / 1000) ;
+            if ( timestamp < last_timestamp )
+              return ;
+            SolarData.dataTimeStamp = timestamp ;
             toks++ ;
           }
         }
@@ -123,7 +135,7 @@ static void display_json_solar_data(char *json_data)
     delim = strtok(NULL,",") ;
   }
 
-  if ( (SolarData.dataTimeStamp > last_timestamp) && (toks == sol_toks))
+  if ( toks == sol_toks ) 
   {
 #ifdef DRAGON
     // clear the screen and reposition cursor at top left
@@ -133,16 +145,8 @@ static void display_json_solar_data(char *json_data)
 #endif
     
     last_timestamp = SolarData.dataTimeStamp ;
-    data_tm = gmtime(&SolarData.dataTimeStamp) ;
-  
-    printf("SOLAR: %s\n", asctime(data_tm));
-
-    printf("POWER TODAY  : %f kW\n", SolarData.eToday);
-    printf("GENERATION   : %f kW\n", SolarData.pac);
-    printf("HOUSE LOAD   : %f kW\n", SolarData.familyLoadPower);
-    printf("BATTERY SOC  : %u%%\n", SolarData.batteryCapacitySoc);
-    printf("BATTERY POWER: %f kW\n", SolarData.batteryPower);
-    printf("GRID         : %f kW\n", SolarData.psum);
+    
+    output_solar_metrics(display_str);
   }
 }
 
@@ -156,6 +160,9 @@ void solar_udp_appcall(void)
       char *solar_data = (char*)uip_appdata ;
       solar_data[uip_datalen()] = 0;
       
+      // sense check to see if this is solar metric data
+      // or just some other string data - decide whether to decode or just 
+      // print it out
       if ( strstr(solar_data,"\"code\":") )
         display_json_solar_data(solar_data);
       else
@@ -173,4 +180,33 @@ void solar_udp_init(void)
     uip_udp_bind(solar_conn, HTONS(solar_udp_port));
     printf( "Listening on UDP Port 52005\n") ;
   }
+}
+
+// output the solar metrics using the supplied callback.
+// By implementing it in this manner, it avoids duplicating
+// all of the string constants eg. if the telnet daemon 
+// is enabled, is uses this same routine but to send the data
+// down a TCP connection
+void output_solar_metrics(output_str_t output_str_cback)
+{
+  char buf[36] ;
+  struct tm data_tm ;
+
+  output_str_cback("SOLAR: ") ;
+  gmtime_r(&SolarData.dataTimeStamp,&data_tm) ;
+  asctime_r(&data_tm,buf) ;
+  output_str_cback(buf) ;
+
+  sprintf(buf,"\nPOWER TODAY  : %f kW\n", SolarData.eToday);
+  output_str_cback(buf) ;
+  sprintf(buf,"GENERATION   : %f kW\n", SolarData.pac);
+  output_str_cback(buf) ;
+  sprintf(buf,"HOUSE LOAD   : %f kW\n", SolarData.familyLoadPower);
+  output_str_cback(buf) ;
+  sprintf(buf,"BATTERY SOC  : %u%%\n", SolarData.batteryCapacitySoc);
+  output_str_cback(buf) ;
+  sprintf(buf,"BATTERY POWER: %f kW\n", SolarData.batteryPower);
+  output_str_cback(buf) ;
+  sprintf(buf,"GRID         : %f kW\n", SolarData.psum);
+  output_str_cback(buf) ;
 }

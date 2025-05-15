@@ -113,7 +113,7 @@ sendline(char *line)
 }
 /*---------------------------------------------------------------------------*/
 void
-shell_prompt(char *str)
+shell_prompt(const char *str)
 {
   char *line;
   line = alloc_line();
@@ -125,7 +125,7 @@ shell_prompt(char *str)
 }
 /*---------------------------------------------------------------------------*/
 void
-shell_output(char *str1, char *str2)
+shell_output(const char *str1, const char *str2)
 {
   static unsigned len;
   char *line;

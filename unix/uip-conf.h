@@ -145,12 +145,16 @@ typedef unsigned short uip_stats_t;
    our project. */
 /*#include "smtp.h"*/
 /*#include "hello-world.h"*/
+#ifdef APP_TELNETD
 #include "telnetd.h"
+#endif
 /*#include "webserver.h"*/
 /*#include "dhcpc.h"*/
 /*#include "resolv.h"*/
 /*#include "webclient.h"*/
+#ifdef APP_SOLARUDP
 #include "solar-udp.h"
+#endif
 
 #endif /* __UIP_CONF_H__ */
 

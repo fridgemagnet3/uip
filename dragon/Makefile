@@ -7,9 +7,22 @@ all: libuip.a libapps.a UIP.BIN
 
 CC     = cmoc
 AR     = lwar
+# define the apps included in the binary
 APPS   = telnetd solar-udp
-CFLAGS+= -I../uip -I../lib -I. -I../time --dragon -c
+CFLAGS+= -I../uip -I../lib -I. -I../time --dragon -c 
 #CFLAGS+= -DSERIAL_DRIVER
+
+# some apps can interact with others, this is handled at compile time
+ifneq (,$(findstring telnetd,$(APPS)))
+CFLAGS+=-DAPP_TELNETD
+endif
+ifneq (,$(findstring solar-udp,$(APPS)))
+CFLAGS+=-DAPP_SOLARUDP
+endif
+ifneq (,$(findstring weather-udp,$(APPS)))
+CFLAGS+=-DAPP_WEATHERUDP
+endif
+
 ARFLAGS = -c
 LDFLAGS+= -i --dragon --org=0x2000
 LIBS = -L../time -ltime -L./ -luip -lapps

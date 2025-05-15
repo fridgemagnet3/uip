@@ -19,4 +19,9 @@ void solar_udp_appcall(void);
 
 void solar_udp_init(void);
 
+typedef void(*output_str_t)(const char *str) ;
+
+// output the solar metrics using the supplied callback
+void output_solar_metrics(output_str_t output_str_cback) ;
+
 #endif

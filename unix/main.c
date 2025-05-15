@@ -70,9 +70,13 @@ main(void)
   uip_setnetmask(ipaddr);
 
   // httpd_init();
-  
+#ifdef APP_TELNETD  
   telnetd_init();
+#endif
+#ifdef APP_SOLARUDP
   solar_udp_init() ;
+#endif
+
   //hello_world_init();
 
   /*  {

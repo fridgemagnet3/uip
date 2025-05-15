@@ -36,6 +36,18 @@ CC     = gcc
 AR     = ar
 APPS   = telnetd solar-udp
 CFLAGS+= -Wall -g -I../uip -I../lib -I. -fpack-struct -Os -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-variable
+
+# some apps can interact with others, this is handled at compile time
+ifneq (,$(findstring telnetd,$(APPS)))
+CFLAGS+=-DAPP_TELNETD
+endif
+ifneq (,$(findstring solar-udp,$(APPS)))
+CFLAGS+=-DAPP_SOLARUDP
+endif
+ifneq (,$(findstring weather-udp,$(APPS)))
+CFLAGS+=-DAPP_WEATHERUDP
+endif
+
 -include ../uip/Makefile.include
 ARFLAGS = rcf
 uip: $(addprefix $(OBJECTDIR)/, main.o tapdev.o clock-arch.o) libapps.a libuip.a -lcap
