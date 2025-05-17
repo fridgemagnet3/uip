@@ -44,6 +44,9 @@ int main(void)
 #ifdef APP_SOLARUDP
   solar_udp_init() ;
 #endif
+#ifdef APP_WEATHERUDP
+  weather_udp_init() ;
+#endif
   
   printf( "Entering main loop\n" ) ;
   while(1)

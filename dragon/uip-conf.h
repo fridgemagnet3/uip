@@ -167,6 +167,9 @@ typedef unsigned short uip_stats_t;
 #ifdef APP_SOLARUDP
 #include "solar-udp.h"
 #endif
+#ifdef APP_WEATHERUDP
+#include "weather-udp.h"
+#endif
 
 #endif /* __UIP_CONF_H__ */
 

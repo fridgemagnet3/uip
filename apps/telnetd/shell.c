@@ -41,6 +41,9 @@
 #ifdef APP_SOLARUDP
 #include "solar-udp.h"
 #endif
+#ifdef APP_WEATHERUDP
+#include "weather-udp.h"
+#endif
 
 struct ptentry {
   const char *commandstr;
@@ -73,7 +76,10 @@ help(char *str)
   shell_output("conn    - show TCP connections", "");
 #endif
 #ifdef APP_SOLARUDP
-  shell_output("solar   - show solar data", "");
+  shell_output("solar   - show solar metrics", "");
+#endif
+#ifdef APP_WEATHERUDP
+  shell_output("weather - show weather data", "");
 #endif
   shell_output("help, ? - show help", "");
   shell_output("exit    - exit shell", "");
@@ -87,15 +93,24 @@ unknown(char *str)
   }
 }
 
-#ifdef APP_SOLARUDP
-static void shell_output_solar(const char *str)
+#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP)
+static void shell_output_string1(const char *str)
 {
   shell_output(str,"") ;
 }
+#endif
 
+#ifdef APP_SOLARUDP
 static void solar(char *str)
 {
-  output_solar_metrics(shell_output_solar);
+  output_solar_metrics(shell_output_string1);
+}
+#endif
+
+#ifdef APP_WEATHERUDP
+static void weather(char *str)
+{
+  output_weather_data(shell_output_string1);
 }
 #endif
 
@@ -108,6 +123,9 @@ static struct ptentry parsetab[] =
 #endif
 #ifdef APP_SOLARUDP
    {"solar", solar},
+#endif
+#ifdef APP_WEATHERUDP
+   {"weather", weather},
 #endif
    {"help", help},
    {"exit", shell_quit},

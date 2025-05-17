@@ -48,6 +48,9 @@ static int extract_quoted_string(const char *src, char *dst)
   return -1 ;
 }
 
+// if the weather app is enabled, this also defines a display_str
+// function so use that rather than generating our own
+#ifndef APP_WEATHERUDP
 static void display_str(const char *str)
 {
 #ifdef _CMOC_VERSION_
@@ -56,6 +59,9 @@ static void display_str(const char *str)
   fputs(str,stdout);
 #endif
 }
+#else
+extern void display_str(const char *str) ;
+#endif
 
 static void display_json_solar_data(char *json_data)
 {
@@ -169,6 +175,13 @@ void solar_udp_appcall(void)
         printf("%s\n",solar_data);
     }
   }
+#ifdef APP_WEATHERUDP
+  // since only one app can be defined to UIP, we ensure this is 
+  // included in uip-conf.h first which means we get called first. 
+  // as such, we're then responsible for calling the weather app if 
+  // it's defined
+  weather_udp_appcall() ;
+#endif
 }
 
 void solar_udp_init(void)
@@ -192,12 +205,11 @@ void output_solar_metrics(output_str_t output_str_cback)
   char buf[36] ;
   struct tm data_tm ;
 
-  output_str_cback("SOLAR: ") ;
   gmtime_r(&SolarData.dataTimeStamp,&data_tm) ;
   asctime_r(&data_tm,buf) ;
   output_str_cback(buf) ;
 
-  sprintf(buf,"\nPOWER TODAY  : %f kW\n", SolarData.eToday);
+  sprintf(buf,"POWER TODAY  : %f kW\n", SolarData.eToday);
   output_str_cback(buf) ;
   sprintf(buf,"GENERATION   : %f kW\n", SolarData.pac);
   output_str_cback(buf) ;
