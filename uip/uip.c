@@ -111,7 +111,7 @@ const uip_ipaddr_t uip_netmask =
   {HTONS((UIP_NETMASK0 << 8) | UIP_NETMASK1),
    HTONS((UIP_NETMASK2 << 8) | UIP_NETMASK3)};
 #else
-uip_ipaddr_t uip_hostaddr, uip_draddr, uip_netmask;
+uip_ipaddr_t uip_hostaddr, uip_draddr, uip_netmask, uip_broadcast;
 #endif /* UIP_FIXEDADDR */
 
 static const uip_ipaddr_t all_ones_addr =
@@ -244,7 +244,7 @@ struct uip_stats uip_stat;
 #ifndef _CMOC_VERSION_
 #include <stdio.h>
 #endif
-void uip_log(char *msg);
+void uip_log(const char *msg);
 #define UIP_LOG(m) uip_log(m)
 #else
 #define UIP_LOG(m)
@@ -919,7 +919,8 @@ uip_process(u8_t flag)
 #if UIP_BROADCAST
     DEBUG_PRINTF("UDP IP checksum 0x%04x\n", uip_ipchksum());
     if(BUF->proto == UIP_PROTO_UDP &&
-       uip_ipaddr_cmp(BUF->destipaddr, all_ones_addr)
+       (uip_ipaddr_cmp(BUF->destipaddr, all_ones_addr) ||
+       (uip_ipaddr_cmp(BUF->destipaddr, uip_broadcast)))
        /*&&
 	 uip_ipchksum() == 0xffff*/) {
       goto udp_input;
@@ -1129,7 +1130,13 @@ uip_process(u8_t flag)
       goto udp_found;
     }
   }
-  UIP_LOG("udp: no matching connection found");
+  // don't generate log noise if this is a broadcast packet
+  // that isn't meant for us
+  if ( !(uip_ipaddr_cmp(BUF->destipaddr, all_ones_addr) ||
+         uip_ipaddr_cmp(BUF->destipaddr, uip_broadcast)) )
+  {
+    UIP_LOG("udp: no matching connection found");
+  }
   goto drop;
   
  udp_found:

@@ -135,6 +135,11 @@ typedef unsigned short uip_stats_t;
 #define UIP_CONF_UDP_CHECKSUMS   1
 
 /**
+ * Enable UDP broadcast support
+ */
+#define UIP_CONF_BROADCAST 1
+
+/**
  * uIP statistics on or off
  *
  * \hideinitializer

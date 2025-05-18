@@ -185,6 +185,13 @@ typedef unsigned short uip_ipaddr_t[2];
  */
 #define uip_getnetmask(addr) uip_ipaddr_copy((addr), uip_netmask)
 
+// set the broadcast address - note that 255.255.255.255 is automatically handled
+// this is the subnet broadcast address
+#define uip_setbroadcast(addr) uip_ipaddr_copy(uip_broadcast, (addr))
+
+// get the broadcast address
+#define uup_getbroadcast(addr) uip_ipaddr_copy((addr), uip_broadcast)
+
 /** @} */
 
 /**
@@ -1546,7 +1553,7 @@ struct uip_udpip_hdr {
 #if UIP_FIXEDADDR
 extern const uip_ipaddr_t uip_hostaddr, uip_netmask, uip_draddr;
 #else /* UIP_FIXEDADDR */
-extern uip_ipaddr_t uip_hostaddr, uip_netmask, uip_draddr;
+extern uip_ipaddr_t uip_hostaddr, uip_netmask, uip_draddr, uip_broadcast;
 #endif /* UIP_FIXEDADDR */
 
 

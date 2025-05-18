@@ -160,7 +160,7 @@ main(void)
 }
 /*---------------------------------------------------------------------------*/
 void
-uip_log(char *m)
+uip_log(const char *m)
 {
   printf("uIP log message: %s\n", m);
 }

@@ -37,7 +37,10 @@ int main(void)
   // set netmask
   uip_ipaddr(ipaddr, 255,255,255,0);
   uip_setnetmask(ipaddr);
-
+  // set broadcast
+  uip_ipaddr(ipaddr, 192,168,3,255);
+  uip_setbroadcast(ipaddr) ;
+  
 #ifdef APP_TELNETD
   telnetd_init();
 #endif
@@ -122,7 +125,7 @@ int main(void)
   return 0 ;
 }
 
-void uip_log(char *m)
+void uip_log(const char *m)
 {
   printf("uIP log message: %s\n", m);
 }
