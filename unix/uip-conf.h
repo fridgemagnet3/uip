@@ -125,7 +125,11 @@ typedef unsigned short uip_stats_t;
  *
  * \hideinitializer
  */
+#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV)
 #define UIP_CONF_UDP             1
+#else
+#define UIP_CONF_UDP             0
+#endif
 
 /**
  * UDP checksums on or off
@@ -150,8 +154,12 @@ typedef unsigned short uip_stats_t;
 #endif
 /*#include "webserver.h"*/
 /*#include "dhcpc.h"*/
-/*#include "resolv.h"*/
-/*#include "webclient.h"*/
+#ifdef APP_RESOLV
+#include "resolv.h"
+#endif
+#ifdef APP_WEBCLIENT
+#include "webclient.h"
+#endif
 #ifdef APP_SOLARUDP
 #include "solar-udp.h"
 #endif

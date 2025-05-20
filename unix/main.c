@@ -36,6 +36,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "uip.h"
 #include "uip_arp.h"
 #include "tapdev.h"
@@ -55,13 +56,20 @@ main(void)
   int i;
   uip_ipaddr_t ipaddr;
   struct timer periodic_timer, arp_timer;
+  // online random MAC generator! 
+  const u8_t mac_addr[] = { 0xa3,0x6f,0x6b,0xbb,0xc9,0xb9 } ;
+  struct uip_eth_addr eth_mac_addr ;
 
   timer_set(&periodic_timer, CLOCK_SECOND / 2);
   timer_set(&arp_timer, CLOCK_SECOND * 10);
   
   tapdev_init();
   uip_init();
-
+  for(i=0;i<6;i++)
+    eth_mac_addr.addr[i] = mac_addr[i] ;
+  // set our MAC
+  uip_setethaddr(eth_mac_addr);
+  
   uip_ipaddr(ipaddr, 192,168,3,2);
   uip_sethostaddr(ipaddr);
   uip_ipaddr(ipaddr, 192,168,3,1);
@@ -90,14 +98,19 @@ main(void)
 	    "Testing SMTP from uIP",
 	    "Test message sent by uIP\r\n");*/
 
-  /*
+#ifdef APP_WEBCLIENT
     webclient_init();
+#endif
+#ifdef APP_RESOLV
     resolv_init();
-    uip_ipaddr(ipaddr, 195,54,122,204);
+    uip_ipaddr(ipaddr, 192,168,0,201);
     resolv_conf(ipaddr);
-    resolv_query("www.sics.se");*/
-
-
+    printf("Issuing DNS lookup...\n") ;
+    resolv_query("monolith.onasticksoftware.net");
+#elif defined(APP_WEBCLIENT)
+    printf("Issuing web request...\n") ;
+    webclient_get("192.168.0.201", 80, "/index.html");
+#endif
   
   while(1) {
     uip_len = tapdev_read();
@@ -177,7 +190,10 @@ resolv_found(char *name, u16_t *ipaddr)
 	   htons(ipaddr[0]) & 0xff,
 	   htons(ipaddr[1]) >> 8,
 	   htons(ipaddr[1]) & 0xff);
-    /*    webclient_get("www.sics.se", 80, "/~adam/uip");*/
+#ifdef APP_WEBCLIENT	   
+       printf("Issuing web request...\n") ;
+       webclient_get(name, 80, "/index.html");
+#endif       
   }
 }
 #ifdef __DHCPC_H__
@@ -218,6 +234,18 @@ webclient_connected(void)
 void
 webclient_datahandler(char *data, u16_t len)
 {
-  printf("Webclient: got %d bytes of data.\n", len);
+  if ( !len )
+  {
+    webclient_close() ;
+  }
+  else
+  {  
+    char buf[len+1] ;
+    printf("Webclient: got %d bytes of data.\n", len);
+  
+    strncpy(buf,data,len) ;
+    buf[len]= 0 ;
+    fputs(buf,stdout);
+  }
 }
 /*---------------------------------------------------------------------------*/

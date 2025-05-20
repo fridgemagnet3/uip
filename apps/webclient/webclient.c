@@ -58,10 +58,15 @@
 #include "uip.h"
 #include "uiplib.h"
 #include "webclient.h"
+#ifdef APP_RESOLV
 #include "resolv.h"
+#endif
 
+#ifndef _CMOC_VERSION_
 #include <string.h>
-
+#else
+#include <cmoc.h>
+#endif
 #define WEBCLIENT_TIMEOUT 100
 
 #define WEBCLIENT_STATE_STATUSLINE 0
@@ -140,20 +145,23 @@ unsigned char
 webclient_get(char *host, u16_t port, char *file)
 {
   struct uip_conn *conn;
-  uip_ipaddr_t *ipaddr;
+  uip_ipaddr_t *ipaddr = NULL;
   static uip_ipaddr_t addr;
   
   /* First check if the host is an IP address. */
-  ipaddr = &addr;
-  if(uiplib_ipaddrconv(host, (unsigned char *)addr) == 0) {
+  ipaddr = (uip_ipaddr_t*)&addr;
+
+  if(uiplib_ipaddrconv(host, (unsigned char *)addr) == 0) 
+  {
+#ifdef APP_RESOLV
     ipaddr = (uip_ipaddr_t *)resolv_lookup(host);
-    
+#endif    
     if(ipaddr == NULL) {
       return 0;
     }
   }
-  
-  conn = uip_connect(ipaddr, htons(port));
+
+  conn = uip_connect((u16_t*)ipaddr, htons(port));
   
   if(conn == NULL) {
     return 0;
@@ -171,7 +179,7 @@ static unsigned char *
 copy_string(unsigned char *dest,
 	    const unsigned char *src, unsigned char len)
 {
-  strncpy(dest, src, len);
+  strncpy((char*)dest, (char*)src, len);
   return dest + len;
 }
 /*-----------------------------------------------------------------------------------*/
@@ -185,19 +193,19 @@ senddata(void)
   if(s.getrequestleft > 0) {
     cptr = getrequest = (char *)uip_appdata;
 
-    cptr = copy_string(cptr, http_get, sizeof(http_get) - 1);
-    cptr = copy_string(cptr, s.file, strlen(s.file));
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)http_get, sizeof(http_get) - 1);
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)s.file, (unsigned char)strlen(s.file));
     *cptr++ = ISO_space;
-    cptr = copy_string(cptr, http_10, sizeof(http_10) - 1);
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)http_10, sizeof(http_10) - 1);
 
-    cptr = copy_string(cptr, http_crnl, sizeof(http_crnl) - 1);
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)http_crnl, sizeof(http_crnl) - 1);
     
-    cptr = copy_string(cptr, http_host, sizeof(http_host) - 1);
-    cptr = copy_string(cptr, s.host, strlen(s.host));
-    cptr = copy_string(cptr, http_crnl, sizeof(http_crnl) - 1);
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)http_host, sizeof(http_host) - 1);
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)s.host, (unsigned char)strlen(s.host));
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)http_crnl, sizeof(http_crnl) - 1);
 
-    cptr = copy_string(cptr, http_user_agent_fields,
-		       strlen(http_user_agent_fields));
+    cptr = (char*)copy_string((unsigned char*)cptr, (const unsigned char*)http_user_agent_fields,
+		       (unsigned char)strlen(http_user_agent_fields));
     
     len = s.getrequestleft > uip_mss()?
       uip_mss():
@@ -224,10 +232,11 @@ static u16_t
 parse_statusline(u16_t len)
 {
   char *cptr;
+  char *uptr = (char*)uip_appdata ;
   
   while(len > 0 && s.httpheaderlineptr < sizeof(s.httpheaderline)) {
-    s.httpheaderline[s.httpheaderlineptr] = *(char *)uip_appdata;
-    ++((char *)uip_appdata);
+    s.httpheaderline[s.httpheaderlineptr] = *uptr++;
+    //++((char *)uip_appdata);
     --len;
     if(s.httpheaderline[s.httpheaderlineptr] == ISO_nl) {
 
@@ -288,14 +297,14 @@ casecmp(char *str1, const char *str2, char len)
 }
 /*-----------------------------------------------------------------------------------*/
 static u16_t
-parse_headers(u16_t len)
+parse_headers(char *uptr, u16_t len)
 {
   char *cptr;
   static unsigned char i;
   
   while(len > 0 && s.httpheaderlineptr < sizeof(s.httpheaderline)) {
-    s.httpheaderline[s.httpheaderlineptr] = *(char *)uip_appdata;
-    ++((char *)uip_appdata);
+    s.httpheaderline[s.httpheaderlineptr] = *uptr++;
+    //++((char *)uip_appdata);
     --len;
     if(s.httpheaderline[s.httpheaderlineptr] == ISO_nl) {
       /* We have an entire HTTP header line in s.httpheaderline, so
@@ -309,6 +318,7 @@ parse_headers(u16_t len)
       }
 
       s.httpheaderline[s.httpheaderlineptr - 1] = 0;
+
       /* Check for specific HTTP header fields. */
       if(casecmp(s.httpheaderline, http_content_type,
 		     sizeof(http_content_type) - 1) == 0) {
@@ -365,12 +375,13 @@ newdata(void)
   }
   
   if(s.state == WEBCLIENT_STATE_HEADERS && len > 0) {
-    len = parse_headers(len);
+    len = parse_headers((char*)uip_appdata+uip_datalen()-len,len);    
   }
 
   if(len > 0 && s.state == WEBCLIENT_STATE_DATA &&
-     s.httpflag != HTTPFLAG_MOVED) {
-    webclient_datahandler((char *)uip_appdata, len);
+     s.httpflag != HTTPFLAG_MOVED) 
+  {
+    webclient_datahandler((char *)uip_appdata+uip_datalen()-len, len);
   }
 }
 /*-----------------------------------------------------------------------------------*/
@@ -426,9 +437,11 @@ webclient_appcall(void)
       /* Send NULL data to signal EOF. */
       webclient_datahandler(NULL, 0);
     } else {
+#ifdef APP_RESOLV
       if(resolv_lookup(s.host) == NULL) {
 	resolv_query(s.host);
       }
+#endif
       webclient_get(s.host, s.port, s.file);
     }
   }

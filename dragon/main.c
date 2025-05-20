@@ -50,7 +50,20 @@ int main(void)
 #ifdef APP_WEATHERUDP
   weather_udp_init() ;
 #endif
-  
+#ifdef APP_WEBCLIENT
+    webclient_init();
+#endif
+#ifdef APP_RESOLV
+    resolv_init();
+    uip_ipaddr(ipaddr, 192,168,0,201);
+    resolv_conf(ipaddr);
+    printf("Issuing DNS lookup...\n") ;
+    resolv_query("monolith.onasticksoftware.net");
+#elif defined(APP_WEBCLIENT)
+    printf("Issuing web request...\n") ;
+    webclient_get("192.168.0.201", 80, "/index.html");
+#endif
+
   printf( "Entering main loop\n" ) ;
   while(1)
   {
@@ -99,7 +112,7 @@ int main(void)
 	    }
 	  }
 	  
-#ifdef UIP_UDP
+#if UIP_UDP
       for(i = 0; i < UIP_UDP_CONNS; i++) 
       {
         uip_udp_periodic(i);
@@ -129,3 +142,51 @@ void uip_log(const char *m)
 {
   printf("uIP log message: %s\n", m);
 }
+
+#ifdef APP_RESOLV
+void resolv_found(char *name, u16_t *ipaddr)
+{
+  u16_t *ipaddr2;
+  
+  if(ipaddr == NULL) 
+  {
+    printf("Host '%s' not found.\n", name);
+  } else 
+  {
+    printf("Found name '%s' = %d.%d.%d.%d\n", name,
+	   htons(ipaddr[0]) >> 8,
+	   htons(ipaddr[0]) & 0xff,
+	   htons(ipaddr[1]) >> 8,
+	   htons(ipaddr[1]) & 0xff);
+#ifdef APP_WEBCLIENT	   
+       printf("Issuing web request...\n") ;
+       webclient_get(name, 80, "/index.html");
+#endif       
+  }
+}
+#endif
+
+#ifdef APP_WEBCLIENT
+void webclient_closed(void)
+{
+  printf("Webclient: connection closed\n");
+}
+
+void webclient_aborted(void)
+{
+  printf("Webclient: connection aborted\n");
+}
+void webclient_timedout(void)
+{
+  printf("Webclient: connection timed out\n");
+}
+void webclient_connected(void)
+{
+  printf("Webclient: connected, waiting for data...\n");
+}
+void webclient_datahandler(char *data, u16_t len)
+{
+  putstr(data,len);
+  //printf("Webclient: got %d bytes of data.\n", len);
+}
+#endif
