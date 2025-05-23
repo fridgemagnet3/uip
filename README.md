@@ -10,9 +10,11 @@ At present the plan is for this to only run on a Dragon 64, not specifically bec
 
 ## Current status
 
-At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) AND a physical Dragon 64. When interfaced to a  [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP), it will respond to ping requests and the current configuration includes a simple telnet server application and some simple UDP based receivers of my own, including one which listens on port 52005 and will display any textual data received. Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) but should work with any packets containing text. In the event it DOES contain solar JSON data, it will also decode & display it nicely:
+At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) AND a physical Dragon 64. When interfaced to a  [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP), it will respond to ping requests and the default configuration includes a simple telnet server application and a simple UDP based receiver of my own which listens on port 52005 and will display any textual data received. Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) but should work with any packets containing text. In the event it DOES contain solar JSON data, it will also decode & display it nicely:
 
 ![solar-weather-metrics](https://github.com/user-attachments/assets/8e00a911-3eaf-4bd7-bc88-7a983dbc8233)
+
+I've also implemented another simple app it up to receive & decode data from my little [weather station](https://www.oasw.co.uk/weather/about.html).
 
 The telnet server also allows this data to be retrieved:
 
@@ -43,6 +45,8 @@ The telnet server also allows this data to be retrieved:
 `RAINFALL    : 0 MM`\
 `uIP 1.0> `
 
+Both the little webclient and DNS resolver applications should also work (although they're not currently enabled by default, should just be a case of adjusting the Makefile as needed). The webclient will work with or without the resover enabled (in case of the latter, you need to specify the web server by IP address) and will simply dump out the contents of the requested document. Both apps currently use IP addresses and names local to my network so will need changing to work. Just be aware that odds are if you try and connect to an external IP, it won't work unless you adjust your router/routing tables to connect to the subnet being used by the TAP interface.
+
 Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the select() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
 
 ## How to build/run the stack (Xroar emulator)
@@ -52,7 +56,7 @@ The stack is currently built using the [CMOC 6809 cross compiler](http://sarrazi
 `cd dragon`\
 `make`
 
-This results in a ~15K DragonDOS compatible binary file named UIP.BIN
+This results in a ~15-20K (depending which apps are enabled) DragonDOS compatible binary file named UIP.BIN. If you enable a lot of them, you will need to adjust the _org_ address in the Makefile to avoid it crashing into the ROM area.
 
 You'll also need [the XRoar emulator](https://github.com/fridgemagnet3/xroar). Unfortunately the current XRoar releases don't emulate the Dragon 64's serial port, you'll therefore need to build my branch, which additionally only runs under Linux. This does a very basic emulation of the serial port, mapping read/write requests to two device files which are intended to be Linux FIFOs. As such, once you've built the emulator, you'll need to create these in the ~./xroar folder:
 
@@ -62,9 +66,8 @@ You'll also need [the XRoar emulator](https://github.com/fridgemagnet3/xroar). U
 
 Every character then written to the serial port on the Dragon, will then be sent to the **tx_uart** file. Anything sent to the **rx_uart** file from the Linux side will then appear on the serial port. 
 
-You then need to load the uIP binary image into the emulator. There are various ways of accomplishing this, including writing it to a virtual disk image, for ease of use I use an instance of Drivewire with the [Becker port](https://www.6809.org.uk/xroar/doc/xroar.shtml#Becker-port-options). At present, with the image being ~19Kbytes in size, I currently target this at the 8K address offset which then gives a reasonable bit of room for growth - something like:
+You then need to load the uIP binary image into the emulator. There are various ways of accomplishing this, including writing it to a virtual disk image, for ease of use I use an instance of Drivewire with the [Becker port](https://www.6809.org.uk/xroar/doc/xroar.shtml#Becker-port-options), it then just a case of loading it from the server:
 
-`CLEAR 512,&H2000`\
 `DLOAD "UIP.BIN`
 
 That last command loads, then runs the application.
@@ -73,7 +76,7 @@ Next you'll need to build (under Linux) the [tap-slip-gw application](/tap-slip-
 
 `cd tap-slip-gw`\
 `make`\
-`sudo setcap 'cap_net_admin+ep' ./tap-slip-gw`\
+`sudo setcap 'cap_net_admin+ep' ./tap-slip-gw`
 
 That last step allows you to run the application as a normal user (instead of 'root'), if you're not fussed about security you can omit it and run as 'root' anyway. This application brings up a Linux TAP interface, then sends/receives packets to the XRoar serial port FIFOs using [SLIP](https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol) (and hence to the uIP stack running in the emulator). The uIP binary itself is currently hardcoded to use an IP address of 192.168.3.2, with a gateway address of 192.168.3.1 so assuming that doesn't conflict with your network settings, should then just be a case of running the application as follows:
 
@@ -98,7 +101,7 @@ Unsurprisingly, the build/setup process is pretty similiar when using the emulat
 
 This configures the 6551 to run at it's maximum baud rate of 19200. On the Linux side, configure the serial port to match - for example:
 
-`stty -F /dev/ttyUSB0 19200 raw -echo crtscts ctopb`
+`stty -F /dev/ttyUSB0 19200 raw -echo crtscts cstopb`
 
 Note the use of the **crtscts** option, this enables hardware flow control so if you've NOT wired this up, don't set it.
 
