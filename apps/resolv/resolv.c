@@ -62,8 +62,11 @@
 
 #include "resolv.h"
 #include "uip.h"
-
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
 #include <string.h>
+#endif
 
 #ifndef NULL
 #define NULL (void *)0
@@ -278,7 +281,7 @@ newdata(void)
     /* Skip the name in the question. XXX: This should really be
        checked agains the name in the question, to be sure that they
        match. */
-    nameptr = parse_name((char *)uip_appdata + 12) + 4;
+    nameptr = (char*)parse_name((unsigned char *)uip_appdata + 12) + 4;
 
     while(nanswers > 0) {
       /* The first byte in the answer resource record determines if it
@@ -289,7 +292,7 @@ newdata(void)
 	/*	printf("Compressed anwser\n");*/
       } else {
 	/* Not compressed name. */
-	nameptr = parse_name((char *)nameptr);
+	nameptr = (char*)parse_name((unsigned char *)nameptr);
       }
 
       ans = (struct dns_answer *)nameptr;

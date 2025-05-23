@@ -51,22 +51,42 @@ int main(void)
   weather_udp_init() ;
 #endif
 #ifdef APP_WEBCLIENT
+    u8_t key = 0 ;
     webclient_init();
+    printf("Press a key to issue web request\n") ;
 #endif
 #ifdef APP_RESOLV
     resolv_init();
+    // address of DNS server
     uip_ipaddr(ipaddr, 192,168,0,201);
     resolv_conf(ipaddr);
-    printf("Issuing DNS lookup...\n") ;
-    resolv_query("monolith.onasticksoftware.net");
-#elif defined(APP_WEBCLIENT)
-    printf("Issuing web request...\n") ;
-    webclient_get("192.168.0.201", 80, "/index.html");
 #endif
 
   printf( "Entering main loop\n" ) ;
   while(1)
   {
+#ifdef APP_WEBCLIENT
+    // poll for keypress
+    asm
+    {
+      jsr $8006
+      beq nokey
+nokey
+      sta :key
+    }
+    // issue request when keypress detected
+    if ( key )
+    {
+#ifdef APP_RESOLV
+      printf("Issuing DNS lookup...\n") ;
+      resolv_query("monolith.onasticksoftware.net");
+#else
+    printf("Issuing web request...\n") ;
+    webclient_get("192.168.0.201", 80, "/index.html");
+#endif
+    }
+#endif
+
     uip_len = slipdev_read();
     if(uip_len > 0) 
     {
@@ -95,7 +115,7 @@ int main(void)
 	    }
       }
     }
-    else if(timer_expired(&periodic_timer))
+    if(timer_expired(&periodic_timer))
     {
       //printf("Periodic timer fired\n") ;
       timer_reset(&periodic_timer);
