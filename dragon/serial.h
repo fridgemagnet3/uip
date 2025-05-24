@@ -7,7 +7,7 @@
 // interrupt driven serial driver for the 6551
 
 // sizeof the serial RX ring buffer
-#define RX_RING_BUFZ 256
+#define RX_RING_BUFZ 1024
 
 void serial_init(void) ;
 

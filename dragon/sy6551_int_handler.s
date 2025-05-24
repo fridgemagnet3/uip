@@ -37,8 +37,9 @@ _restore_int_handler
 _restore_int_handler EXPORT
 
 _rx_ring_buffer IMPORT
-_ring_read_off IMPORT
-_ring_write_off IMPORT
+_rx_ring_buffer_end IMPORT
+_ring_read_ptr IMPORT
+_ring_write_ptr IMPORT
 _ring_overruns IMPORT
 
 irq_handler
@@ -46,25 +47,27 @@ irq_handler
 	LDA reg_status
 	ANDA #8
 	BEQ fin
-	; fetch current write offset
-	LDB _ring_write_off
-	;STB 1024
-	INCB
+	; read data from the ACIA
+	LDA reg_rx
+	; fetch current write pointer, increment
+	LDX _ring_write_ptr
+	TFR X,Y
+	LEAX 1,X
+	; check for end of ring buffer
+    CMPX _rx_ring_buffer_end
+    BNE nring
+    LDX _rx_ring_buffer
+nring
+	;STX 1024
 	; check to see if we've wrapped, if so drop the byte
-	CMPB _ring_read_off
+	CMPX _ring_read_ptr
 	BEQ drop
 	; update the next write offset
-	STB _ring_write_off
+	STX _ring_write_ptr
 	; finally write in the data from the 6551
-	LEAX _rx_ring_buffer,pcr
-	DECB
-	CLRA
-	LEAX D,X
-	LDA reg_rx
-	STA ,X
+	STA ,Y
 	BRA fin
 drop
-	LDA reg_rx
 	; update overrun counter
 	INC _ring_overruns
 	;INC 1028

@@ -2,17 +2,18 @@
 #include "serial.h"
 
 /* Interrupt driven serial driver for the 6551. This  
-   provides a 256 byte receive ring buffer which is populated by
+   provides a configurable receive ring buffer which is populated by
    the interrupt handler. 
    
    When used with the emulator, you need to throttle back the
    transmit rate through the RX FIFO (see 'tap-slip-gw) otherwise
    you'll overwhelm it and trigger massive overruns. Using a 
    figure of 1000 as the tx-delay(us) seems to yield roughly the 
-   same ping times as when connected to a real Dragon @19200 baud
-   however even then you'll see get sporadic overruns, particularly
-   during the burst of traffic at startup.
-   
+   same ping times as when connected to a real Dragon @19200 baud.
+
+   Below comments originate from the original, fixed 256 byte ring
+   buffer, in theory should be even better now, even with 3 wire serial:
+      
    On the real hardware, with 3-wire serial this works quite nicely
    99% of the time, where sporadic overruns start showing up is when 
    the Dragon performs large packet receives/sends at the same time eg.
@@ -40,16 +41,19 @@ static u8_t *sy6551_status = (u8_t*)0xff05 ;
 static u8_t *sy6551_cmd = (u8_t*)0xff06 ;
 
 // RX ring buffer 
-u8_t rx_ring_buffer[RX_RING_BUFZ] ;
+u8_t *rx_ring_buffer ;
+// end of the ring buffer
+u8_t *rx_ring_buffer_end ;
 // read pointer in ring buffer
-u8_t ring_read_off = 0u ;
+u8_t *ring_read_ptr ;
 // write pointer in ring buffer
-u8_t ring_write_off = 0u ;
+u8_t *ring_write_ptr ;
 // no. of overruns detected
 u8_t ring_overruns = 0u;
 
 extern void install_6551_int_handler(void) ;
 extern void restore_int_handler(void) ;
+
 #if 0
 int main(void)
 {
@@ -57,17 +61,13 @@ int main(void)
   u8_t *p = (u8_t*)1056 ;
   u8_t c ;
   
-  install_6551_int_handler() ;
+  serial_init() ;
   
-  printf ( "rx_ring_buffer: %x\n", (u16_t)rx_ring_buffer) ;
-  printf( "ring_write_off: %x\n", (u16_t)&ring_write_off) ;
-  printf( "ring_overruns: %x\n", (u16_t)&ring_overruns) ;
-
   while(1)
   {
     c = serial_get() ;
-    *p = ring_read_off ;
-    //printf("%c", c ) ;
+    //*p = ring_read_off ;
+    printf("%c", c ) ;
   }
 
   //restore_int_handler() ;
@@ -77,12 +77,20 @@ int main(void)
 
 void serial_init(void)
 {
+  u8_t **p_graphics_base = (u8_t**)0xba ;
+
+  // locate the ring buffer in the first graphics page  
+  rx_ring_buffer = *p_graphics_base ;
+  // initialise pointers
+  ring_read_ptr = rx_ring_buffer ;
+  ring_write_ptr = rx_ring_buffer ;
+  rx_ring_buffer_end = rx_ring_buffer + RX_RING_BUFZ ;
   install_6551_int_handler() ;
 }
 
 u8_t serial_rx_pending(void)
 {
-  return (ring_write_off != ring_read_off) ; 
+  return (ring_read_ptr != ring_write_ptr) ; 
 }
 
 u8_t serial_tx_empty(void)
@@ -103,10 +111,12 @@ u8_t serial_get(void)
 {
   u8_t c ;
   
-  while(ring_write_off == ring_read_off)
+  while(ring_read_ptr == ring_write_ptr)
   {
   }
-  c = rx_ring_buffer[ring_read_off++] ;
+  c = *ring_read_ptr++ ;
+  if ( ring_read_ptr == rx_ring_buffer_end )
+    ring_read_ptr = rx_ring_buffer ;
   
   return c ;
 }
