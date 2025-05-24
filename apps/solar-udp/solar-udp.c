@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#define atoff(a) strtof(a,NULL)
 #else
 #include <cmoc.h>
 #endif
@@ -98,7 +99,7 @@ static void display_json_solar_data(char *json_data)
           {
             // we don't have a 64-bit data type so this needs to be converted to a float
             // before storing in a 32-bit long
-            float f = strtof(val,NULL);
+            float f = atoff(val);
             timestamp = (time_t)(f / 1000) ;
             if ( timestamp < last_timestamp )
               return ;
@@ -108,12 +109,12 @@ static void display_json_solar_data(char *json_data)
         }
         else if ( !strcmp(name,"eToday") )
         {
-          SolarData.eToday = strtof(ptr,NULL);
+          SolarData.eToday = atoff(ptr);
           toks++ ;
         }
         else if ( !strcmp(name,"pac") )
         {
-          SolarData.pac = strtof(ptr,NULL);
+          SolarData.pac = atoff(ptr);
           toks++ ;
         }
         else if ( !strcmp(name,"batteryCapacitySoc") )
@@ -123,17 +124,17 @@ static void display_json_solar_data(char *json_data)
         }
         else if ( !strcmp(name,"batteryPower") )
         {
-          SolarData.batteryPower = strtof(ptr,NULL);
+          SolarData.batteryPower = atoff(ptr);
           toks++ ;
         }
         else if ( !strcmp(name,"psum") )
         {
-          SolarData.psum = strtof(ptr,NULL);
+          SolarData.psum = atoff(ptr);
           toks++ ;
         }
         else if ( !strcmp(name,"familyLoadPower") )
         {
-          SolarData.familyLoadPower = strtof(ptr,NULL);
+          SolarData.familyLoadPower = atoff(ptr);
           toks++ ;
         }
       }
@@ -180,6 +181,9 @@ void solar_udp_appcall(void)
   // included in uip-conf.h first which means we get called first. 
   // as such, we're then responsible for calling the weather app if 
   // it's defined
+  
+  extern void weather_udp_appcall(void);
+  
   weather_udp_appcall() ;
 #endif
 }

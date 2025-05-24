@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#define atoff(a) strtof(a,NULL)
+#define atoul(a) strtoul(a,NULL,10)
+#define atoui(a) (u16_t)strtoul(a,NULL,10)
 #else
 #include <cmoc.h>
 #endif
@@ -13,13 +16,14 @@ typedef struct {
   time_t  timestamp ;  // Unix timestamp
   float   temp ; // temperature
   float   wind ; // wind speed
-  u8_t    rain ; // rainfall
+  u16_t   rain ; // rainfall
 } weather_t ;
 
 static weather_t weather ;
 
 // socat udp-recv:52003 udp-sendto:192.168.3.2:52003
 static struct uip_udp_conn *weather_conn = NULL;
+static u8_t first_run = 1u ;
 
 static const u16_t weather_udp_port = 52003 ;
 
@@ -46,8 +50,11 @@ void weather_udp_appcall(void)
 
 #ifdef DRAGON
        // clear screen on first run
-       if ( !weather.timestamp )
+       if ( first_run )
+       {
          memset16(0x400,0x6060,0x100) ;
+         first_run = 0u ;
+       }
 #endif
       // weather data comes in as a single line of text
       // comprising timestamp, temperature, windspeed, rainfall
@@ -58,16 +65,16 @@ void weather_udp_appcall(void)
         switch(toks)
         {
           case 0 :
-            weather.timestamp = strtoul(delim,NULL,10) ;
+            weather.timestamp = atoul(delim) ;
             break ;
           case 1 :
-            weather.temp = strtof(delim,NULL);
+            weather.temp = atoff(delim);
             break ;
           case 2 :
-            weather.wind = strtof(delim,NULL); ;
+            weather.wind = atoff(delim); ;
             break ;
           case 3:
-            weather.rain = (u8_t)atoui(delim) ;
+            weather.rain = atoui(delim) ;
             break ;
         }
         toks++ ;

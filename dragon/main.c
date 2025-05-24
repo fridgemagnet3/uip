@@ -70,8 +70,6 @@ int main(void)
     asm
     {
       jsr $8006
-      beq nokey
-nokey
       sta :key
     }
     // issue request when keypress detected

@@ -211,6 +211,8 @@ smtp_done(unsigned char code)
 {
   printf("SMTP done with code %d\n", code);
 }
+
+#ifdef APP_WEBCLIENT
 void
 webclient_closed(void)
 {
@@ -248,4 +250,5 @@ webclient_datahandler(char *data, u16_t len)
     fputs(buf,stdout);
   }
 }
+#endif
 /*---------------------------------------------------------------------------*/
