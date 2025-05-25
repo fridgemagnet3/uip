@@ -14,7 +14,7 @@ At present, the stack builds and runs on a [modified version of the XRoar emulat
 
 ![solar-weather-metrics](https://github.com/user-attachments/assets/8e00a911-3eaf-4bd7-bc88-7a983dbc8233)
 
-I've also implemented another simple app it up to receive & decode data from my little [weather station](https://www.oasw.co.uk/weather/about.html).
+I've also implemented another simple app to receive & decode data from my little [weather station](https://www.oasw.co.uk/weather/about.html).
 
 The telnet server also allows this data to be retrieved:
 
@@ -94,6 +94,8 @@ and get responses back from the Dragon.
 
 For this, you'll need to wire up a serial cable between the Dragon and Linux machine. In addition to the usual 3-wires required (RX,TX,GND), I also recommend you wire up the flow control pins, from the Dragon side DTR to CTS and CTS to RTS. The [serial driver](dragon/serial.c) uses DTR to reduce (prevent?) receive overruns, it'll still work if you choose not to (although from memory, I think the 6551 requires CTS to be asserted before it will transmit) however you might see dropped bytes, particularly when sending large (>1KByte) packets.
 
+As of [4862108](https://github.com/fridgemagnet3/uip/commit/4862108f67842cfb450d10b7e0e31bf8a1737191), I've re-engineering the serial driver to allow for a configurable RX ring buffer size (previously it was fixed at 256 bytes) as I was starting to see overruns whilst some of the sample applications were running. Additionally, I've relocated the buffer to the first graphics page in memory (nominally $600 or $C00 if a DOS is present). The default value is 1Kbytes and this seems to have improved things significantly, to the extent where hardware flow control may not be required but some more testing is required....
+
 Unsurprisingly, the build/setup process is pretty similiar when using the emulator. When building the stack, enable the serial driver:
 
 `cd dragon`\
@@ -110,3 +112,9 @@ Build the __tap-slip-gw__ app, this time when running it, pass in the name of th
 `./tap-slip-gw 192.168.3.1 0 /dev/ttyUSB0`
 
 Again, you'll need to allow a minute or two for the Dragon to digest the burst of traffic that tends to occur whenever a new interface is brought up but after that you should be able to successfully ping it and start playing with the other apps.
+
+![PXL_20250524_133458707](https://github.com/user-attachments/assets/6a375ef9-8c43-4782-9505-a0aff4759a8e)
+
+Note that the serial driver will also work with the emulator however there's no real benefit in operating it in that mode, you'll need to throttle the transmits from the tap-slip-gw app in order to avoid massive overruns which ultimately makes everything run much slower. See my comments at the top of the [serial.c](dragon/serial.c) file.
+
+
