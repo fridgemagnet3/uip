@@ -14,6 +14,7 @@
 #include <sys/select.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "packet-filter.h"
 
 #define SLIP_END     0300
 #define SLIP_ESC     0333
@@ -140,7 +141,7 @@ static int tx_slip_pkt(int fd, const uint8_t *pkt, const int size, useconds_t tx
   const uint8_t *ptr = pkt ;
   uint8_t c ;
   
-  //printf("tx_slip_pkt: %d\n",size) ;
+  printf("tx_slip_pkt: %d\n",size) ;
 
   rc = write(fd,&slip_end,1) ;
   if ( rc < 0 )
@@ -200,8 +201,14 @@ static int rx_slip_pkt(int fd, uint8_t *pktbuf, const int bufsz)
   int rc  ; 
   uint8_t *ptr = pktbuf ;
   bool eof_pkt = false ;
+  fd_set fdset;
+  struct timeval timeout ;
   
-  //printf("rx_slip_pkt\n" ) ;
+  // overall timeout before giving up
+  timeout.tv_sec = 5 ;
+  timeout.tv_usec = 0 ;
+  
+  printf("rx_slip_pkt\n" ) ;
   while(!eof_pkt)
   {
     if ( len == bufsz )
@@ -246,9 +253,30 @@ static int rx_slip_pkt(int fd, uint8_t *pktbuf, const int bufsz)
 
     if ( rc < 0 )
     {
-      perror("rx_slip_pkt") ;
+      perror("rx_slip_pkt: read") ;
       len = -1 ;
-      break ;
+      eof_pkt = true ;
+    }
+    else if ( !rc )  // this normally can only happen if using a serial device
+    {
+      // to avoid spinning indefinately, wait for more data to arrive
+      FD_ZERO(&fdset);
+      FD_SET(fd, &fdset);
+      // on Linux, the timeout gets decreased by the amount this call waits
+      // so this will timeout after a total of 5s not per poll
+      rc = select(fd+1,&fdset,NULL,NULL,&timeout) ;
+      if ( !rc )
+      {
+        printf("Timed out waiting for rx data\n") ;
+        len = -1 ;
+        eof_pkt = true ;
+      }
+      else if ( rc < 0 )
+      {
+        perror("rx_slip_pkt: select" ) ;
+        len = -1 ;
+        eof_pkt = true ;
+      } 
     }
   }
 
@@ -270,7 +298,7 @@ int main(int argc, char *argv[] )
 
   if ( argc > 2 )
   {
-    // When testing the serial driver on the Dragon side, 
+    // When testing the serial driver on the Dragon side (under emulation), 
     // sending all the data as fast as possible isn't representative 
     // so this allows the injection of a short delay between each character.
     // Using a figure of ~1000 gives a latency similar to that seen on
@@ -332,7 +360,7 @@ int main(int argc, char *argv[] )
         rc = read(tap_fd, pktbuf, sizeof(pktbuf));
         if ( rc < 0 )
           perror("TAP read") ;
-        else
+        else if ( !filter_packet(pktbuf,rc) )
         {
           // send it to the xroar fifo
           rc = tx_slip_pkt(xroar_tx_fifo,pktbuf,rc,uart_delay) ;

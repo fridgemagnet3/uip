@@ -1,7 +1,7 @@
 CC?=gcc
 CFLAGS=-g -O2 -D_FILE_OFFSET_BITS=64 -fmessage-length=0 -fPIC 
 
-OBJS=tap-slip-gw.o
+OBJS=tap-slip-gw.o packet-filter.o
 LIBS=-lcap
 APP=tap-slip-gw
 
