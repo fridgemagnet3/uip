@@ -11,4 +11,7 @@ bool filter_packet(uint8_t *pkt, uint16_t size) ;
 // enable/disable UDP broadcasts
 void enable_udp_broadcast(bool enable) ;
 
+// enable a specific UDP broadcast port
+void enable_broadcast_udp_port(uint16_t port) ;
+
 #endif

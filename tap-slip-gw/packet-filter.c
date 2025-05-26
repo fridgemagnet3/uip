@@ -1,10 +1,19 @@
 #include "packet-filter.h"
 #include <string.h>
+#ifdef linux
 #include <net/ethernet.h>
+#else
+#include "ethernet.h"
+#endif
 #include <arpa/inet.h>
 #include <netinet/ip.h>
+#include <netinet/udp.h>
+
+#define MAX_UDP_PORTS 256
 
 static bool filter_udp_broadcast = true ;
+static uint16_t udp_broadcast_ports[MAX_UDP_PORTS] ;
+static uint16_t next_port_idx = 0 ;
 
 // return true if packet should be filtered
 bool filter_packet(uint8_t *pkt, uint16_t size)
@@ -29,10 +38,27 @@ bool filter_packet(uint8_t *pkt, uint16_t size)
     
     if ( ip_hdr->ip_p == IPPROTO_UDP )
     {
-      // apply UDP filtering logic
-      // possible future enhancement - allow for individual IP/port numbers to be filtered
-      // rather than all or nothing
-      return filter_udp_broadcast ;        
+      // apply UDP filtering logic..
+      
+      // if not filtering broadcasts, let the packet through
+      if ( !filter_udp_broadcast )
+        return false ;
+      // if no exceptions in place, discard it
+      if ( !next_port_idx )
+        return true ;
+        
+      struct udphdr *udp_hdr = (struct udphdr*)(pkt+sizeof(struct ether_header)+sizeof(struct ip)) ;
+      uint16_t i ;
+            
+      // walk thru the list of allowed UDP ports
+      for ( i=0 ; i < next_port_idx ; i++ )
+      {
+        // if matches incoming packet, allow it through
+        if ( udp_broadcast_ports[i] == htons(udp_hdr->uh_dport) )
+          return false ;
+      }
+      // discard
+      return true ;
     }
     
   }
@@ -44,5 +70,11 @@ bool filter_packet(uint8_t *pkt, uint16_t size)
 
 void enable_udp_broadcast(bool enable)
 {
-  filter_udp_broadcast = enable ;
+  filter_udp_broadcast = !enable ;
+}
+
+void enable_broadcast_udp_port(uint16_t port) 
+{
+  if ( next_port_idx < MAX_UDP_PORTS )
+    udp_broadcast_ports[next_port_idx++] = port ;
 }
