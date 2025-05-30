@@ -69,38 +69,45 @@ main(void)
     eth_mac_addr.addr[i] = mac_addr[i] ;
   // set our MAC
   uip_setethaddr(eth_mac_addr);
-  
+
+#ifndef APP_DHCPC  
   uip_ipaddr(ipaddr, 192,168,3,2);
   uip_sethostaddr(ipaddr);
   uip_ipaddr(ipaddr, 192,168,3,1);
   uip_setdraddr(ipaddr);
   uip_ipaddr(ipaddr, 255,255,255,0);
   uip_setnetmask(ipaddr);
-
-  // httpd_init();
+  // set broadcast
+  uip_ipaddr(ipaddr, 192,168,3,255);
+  uip_setbroadcast(ipaddr) ;
+#else
+  dhcpc_init(&mac_addr, 6);
+#endif
+#ifdef APP_HTTPD
+  httpd_init();
+#endif
 #ifdef APP_TELNETD  
   telnetd_init();
 #endif
 #ifdef APP_SOLARUDP
   solar_udp_init() ;
 #endif
+#ifdef APP_HELLOWORLD
+  hello_world_init();
+#endif
 
-  //hello_world_init();
-
-  /*  {
-      u8_t mac[6] = {1,2,3,4,5,6};
-      dhcpc_init(&mac, 6);
-      }*/
-  
+#ifdef APP_SMTP
   /*uip_ipaddr(ipaddr, 127,0,0,1);
   smtp_configure("localhost", ipaddr);
   SMTP_SEND("adam@sics.se", NULL, "uip-testing@example.com",
 	    "Testing SMTP from uIP",
 	    "Test message sent by uIP\r\n");*/
+#endif
 
 #ifdef APP_WEBCLIENT
     webclient_init();
 #endif
+
 #ifdef APP_RESOLV
     resolv_init();
     uip_ipaddr(ipaddr, 192,168,0,201);
@@ -177,6 +184,8 @@ uip_log(const char *m)
 {
   printf("uIP log message: %s\n", m);
 }
+
+#ifdef APP_RESOLV
 void
 resolv_found(char *name, u16_t *ipaddr)
 {
@@ -196,21 +205,28 @@ resolv_found(char *name, u16_t *ipaddr)
 #endif       
   }
 }
-#ifdef __DHCPC_H__
+#endif
+
+#ifdef APP_DHCPC
 void
 dhcpc_configured(const struct dhcpc_state *s)
 {
   uip_sethostaddr(s->ipaddr);
   uip_setnetmask(s->netmask);
   uip_setdraddr(s->default_router);
+#ifdef APP_RESOLV
   resolv_conf(s->dnsaddr);
+#endif
 }
-#endif /* __DHCPC_H__ */
+#endif 
+
+#ifdef APP_SMTP
 void
 smtp_done(unsigned char code)
 {
   printf("SMTP done with code %d\n", code);
 }
+#endif
 
 #ifdef APP_WEBCLIENT
 void

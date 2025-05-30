@@ -37,12 +37,12 @@
 #include "uip.h"
 #include "dhcpc.h"
 #include "timer.h"
-#include "pt.h"
 
 #define STATE_INITIAL         0
 #define STATE_SENDING         1
 #define STATE_OFFER_RECEIVED  2
 #define STATE_CONFIG_RECEIVED 3
+#define STATE_DONE            4
 
 static struct dhcpc_state s;
 
@@ -170,6 +170,8 @@ send_discover(void)
   u8_t *end;
   struct dhcp_msg *m = (struct dhcp_msg *)uip_appdata;
 
+  printf("send_discover\n") ;
+
   create_msg(m);
 
   end = add_msg_type(&m->options[4], DHCPDISCOVER);
@@ -184,6 +186,8 @@ send_request(void)
 {
   u8_t *end;
   struct dhcp_msg *m = (struct dhcp_msg *)uip_appdata;
+
+  printf("send_request\n") ;
 
   create_msg(m);
   
@@ -244,79 +248,79 @@ parse_msg(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
-static
-PT_THREAD(handle_dhcp(void))
+static void handle_dhcp(void)
 {
-  PT_BEGIN(&s.pt);
-  
-  /* try_again:*/
-  s.state = STATE_SENDING;
-  s.ticks = CLOCK_SECOND;
+  if ( s.state==STATE_DONE )
+    return ;
+  printf("s.state=%d\n", s.state) ;
+  printf("s.ticks=%d\n", s.ticks) ;
 
-  do {
-    send_discover();
-    timer_set(&s.timer, s.ticks);
-    PT_WAIT_UNTIL(&s.pt, uip_newdata() || timer_expired(&s.timer));
-
-    if(uip_newdata() && parse_msg() == DHCPOFFER) {
-      s.state = STATE_OFFER_RECEIVED;
+  switch(s.state)
+  {
+    case STATE_INITIAL :
+    
+      send_discover();
+      s.state = STATE_SENDING;
+      s.ticks = CLOCK_SECOND;
+      timer_set(&s.timer, s.ticks);
+      break ;
+ 
+    case STATE_SENDING :
+    
+      if(uip_newdata() && parse_msg() == DHCPOFFER) 
+      {
+        send_request();
+        s.state = STATE_OFFER_RECEIVED;
+        s.ticks = CLOCK_SECOND;
+        timer_set(&s.timer, s.ticks);
+      }
+      break ;
+    
+    case STATE_OFFER_RECEIVED :
+    
+      if(uip_newdata() && parse_msg() == DHCPACK) 
+        s.state = STATE_CONFIG_RECEIVED;
       break;
-    }
-
-    if(s.ticks < CLOCK_SECOND * 60) {
-      s.ticks *= 2;
-    }
-  } while(s.state != STATE_OFFER_RECEIVED);
-  
-  s.ticks = CLOCK_SECOND;
-
-  do {
-    send_request();
-    timer_set(&s.timer, s.ticks);
-    PT_WAIT_UNTIL(&s.pt, uip_newdata() || timer_expired(&s.timer));
-
-    if(uip_newdata() && parse_msg() == DHCPACK) {
-      s.state = STATE_CONFIG_RECEIVED;
-      break;
-    }
-
-    if(s.ticks <= CLOCK_SECOND * 10) {
-      s.ticks += CLOCK_SECOND;
-    } else {
-      PT_RESTART(&s.pt);
-    }
-  } while(s.state != STATE_CONFIG_RECEIVED);
-  
-#if 0
-  printf("Got IP address %d.%d.%d.%d\n",
-	 uip_ipaddr1(s.ipaddr), uip_ipaddr2(s.ipaddr),
-	 uip_ipaddr3(s.ipaddr), uip_ipaddr4(s.ipaddr));
-  printf("Got netmask %d.%d.%d.%d\n",
-	 uip_ipaddr1(s.netmask), uip_ipaddr2(s.netmask),
-	 uip_ipaddr3(s.netmask), uip_ipaddr4(s.netmask));
-  printf("Got DNS server %d.%d.%d.%d\n",
-	 uip_ipaddr1(s.dnsaddr), uip_ipaddr2(s.dnsaddr),
-	 uip_ipaddr3(s.dnsaddr), uip_ipaddr4(s.dnsaddr));
-  printf("Got default router %d.%d.%d.%d\n",
-	 uip_ipaddr1(s.default_router), uip_ipaddr2(s.default_router),
-	 uip_ipaddr3(s.default_router), uip_ipaddr4(s.default_router));
-  printf("Lease expires in %ld seconds\n",
-	 ntohs(s.lease_time[0])*65536ul + ntohs(s.lease_time[1]));
-#endif
-
-  dhcpc_configured(&s);
-  
-  /*  timer_stop(&s.timer);*/
-
-  /*
-   * PT_END restarts the thread so we do this instead. Eventually we
-   * should reacquire expired leases here.
-   */
-  while(1) {
-    PT_YIELD(&s.pt);
+      
+    case STATE_CONFIG_RECEIVED :
+    
+     printf("Got IP address %d.%d.%d.%d\n",
+      uip_ipaddr1(s.ipaddr), uip_ipaddr2(s.ipaddr),
+      uip_ipaddr3(s.ipaddr), uip_ipaddr4(s.ipaddr));
+     printf("Got netmask %d.%d.%d.%d\n",
+      uip_ipaddr1(s.netmask), uip_ipaddr2(s.netmask),
+      uip_ipaddr3(s.netmask), uip_ipaddr4(s.netmask));
+     printf("Got DNS server %d.%d.%d.%d\n",
+      uip_ipaddr1(s.dnsaddr), uip_ipaddr2(s.dnsaddr),
+      uip_ipaddr3(s.dnsaddr), uip_ipaddr4(s.dnsaddr));
+     printf("Got default router %d.%d.%d.%d\n",
+      uip_ipaddr1(s.default_router), uip_ipaddr2(s.default_router),
+      uip_ipaddr3(s.default_router), uip_ipaddr4(s.default_router));
+     printf("Lease expires in %ld seconds\n",
+	     ntohs(s.lease_time[0])*65536ul + ntohs(s.lease_time[1]));
+      dhcpc_configured(&s);
+      s.state = STATE_DONE ;
+      break ;
+      
+    default :
+      break ;
   }
-
-  PT_END(&s.pt);
+  
+  if ( timer_expired(&s.timer) )
+  {
+    if(s.ticks < CLOCK_SECOND * 60)
+    {
+      s.ticks *= 2;
+      timer_set(&s.timer, s.ticks);
+      // doing this here is a bit hacky..
+      if ( s.state == STATE_SENDING )
+        send_discover();
+      else
+        send_request();
+    }
+    else
+      s.state = STATE_INITIAL ;
+  }  
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -333,7 +337,6 @@ dhcpc_init(const void *mac_addr, int mac_len)
   if(s.conn != NULL) {
     uip_udp_bind(s.conn, HTONS(DHCPC_CLIENT_PORT));
   }
-  PT_INIT(&s.pt);
 }
 /*---------------------------------------------------------------------------*/
 void

@@ -125,7 +125,7 @@ typedef unsigned short uip_stats_t;
  *
  * \hideinitializer
  */
-#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV)
+#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV) || defined(APP_DHCPC)
 #define UIP_CONF_UDP             1
 #else
 #define UIP_CONF_UDP             0
@@ -153,7 +153,9 @@ typedef unsigned short uip_stats_t;
 #include "telnetd.h"
 #endif
 /*#include "webserver.h"*/
-/*#include "dhcpc.h"*/
+#ifdef APP_DHCPC
+#include "dhcpc.h"
+#endif
 #ifdef APP_RESOLV
 #include "resolv.h"
 #endif
