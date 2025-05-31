@@ -344,6 +344,9 @@ int main(int argc, char *argv[] )
   uint8_t pktbuf[1500];
   int rc ;
   
+  // allow DHCP broadcast packets
+  enable_broadcast_udp_port(68) ;
+  
   printf("Starting..\n") ;
 
   if ( tap_fd > xroar_rx_fifo )

@@ -34,7 +34,8 @@ all: uip
 
 CC     = gcc
 AR     = ar
-APPS   = webclient
+APPS   = telnetd solar-udp
+#APPS   = dhcpc telnetd
 CFLAGS+= -Wall -g -I../uip -I../lib -I. -fpack-struct -Os -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-variable
 
 # some apps can interact with others, this is handled at compile time
@@ -52,6 +53,9 @@ CFLAGS+=-DAPP_WEBCLIENT
 endif
 ifneq (,$(findstring resolv,$(APPS)))
 CFLAGS+=-DAPP_RESOLV
+endif
+ifneq (,$(findstring dhcpc,$(APPS)))
+CFLAGS+=-DAPP_DHCPC
 endif
 
 -include ../uip/Makefile.include

@@ -125,7 +125,7 @@ typedef unsigned short uip_stats_t;
  *
  * \hideinitializer
  */
-#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV)
+#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV) || defined(APP_DHCPC)
 #define UIP_CONF_UDP             1
 /**
  * UDP checksums on or off
@@ -164,13 +164,15 @@ typedef unsigned short uip_stats_t;
 
 /* Here we include the header file for the application(s) we use in
    our project. */
-/*#include "smtp.h"*/
-/*#include "hello-world.h"*/
 #ifdef APP_TELNETD
 #include "telnetd.h"
 #endif
-/*#include "webserver.h"*/
-/*#include "dhcpc.h"*/
+#ifdef APP_HTTPD
+#include "webserver.h"
+#endif
+#ifdef APP_DHCPC
+#include "dhcpc.h"
+#endif
 #ifdef APP_RESOLV
 #include "resolv.h"
 #endif

@@ -9,7 +9,7 @@ CC     = cmoc
 AR     = lwar
 # define the apps included in the binary
 APPS   = telnetd solar-udp
-#APPS    = webclient
+#APPS    = webclient resolv
 CFLAGS+= -I../uip -I../lib -I. -I../time --dragon -c 
 #CFLAGS+= -DSERIAL_DRIVER
 
@@ -19,9 +19,11 @@ CFLAGS+=-DAPP_TELNETD
 endif
 ifneq (,$(findstring solar-udp,$(APPS)))
 CFLAGS+=-DAPP_SOLARUDP
+LIBS = -L../time -ltime
 endif
 ifneq (,$(findstring weather-udp,$(APPS)))
 CFLAGS+=-DAPP_WEATHERUDP
+LIBS = -L../time -ltime
 endif
 ifneq (,$(findstring webclient,$(APPS)))
 CFLAGS+=-DAPP_WEBCLIENT
@@ -29,10 +31,13 @@ endif
 ifneq (,$(findstring resolv,$(APPS)))
 CFLAGS+=-DAPP_RESOLV
 endif
+ifneq (,$(findstring dhcpc,$(APPS)))
+CFLAGS+=-DAPP_DHCPC
+endif
 
 ARFLAGS = -c
 LDFLAGS+= -i --dragon --org=0x1c00
-LIBS = -L../time -ltime -L./ -luip -lapps
+LIBS+= -L./ -luip -lapps
 -include ../uip/Makefile.include
 
 $(OBJECTDIR)/%.o: %.s

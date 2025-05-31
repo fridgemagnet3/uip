@@ -28,6 +28,7 @@ int main(void)
 
   // set our MAC
   uip_setethaddr(eth_mac_addr);
+#ifndef APP_DHCPC  
   // set our IP
   uip_ipaddr(ipaddr, 192,168,3,2);
   uip_sethostaddr(ipaddr);
@@ -40,6 +41,9 @@ int main(void)
   // set broadcast
   uip_ipaddr(ipaddr, 192,168,3,255);
   uip_setbroadcast(ipaddr) ;
+#else
+  dhcpc_init(&mac_addr, 6);
+#endif
   
 #ifdef APP_TELNETD
   telnetd_init();
@@ -183,6 +187,20 @@ void resolv_found(char *name, u16_t *ipaddr)
   }
 }
 #endif
+
+#ifdef APP_DHCPC
+void dhcpc_configured(const struct dhcpc_state *s)
+{
+  uip_sethostaddr(s->ipaddr);
+  uip_setnetmask(s->netmask);
+  uip_setdraddr(s->default_router); 
+  uip_setbroadcast(s->broadcast_addr) ;
+  
+#ifdef APP_RESOLV
+  resolv_conf(s->dnsaddr);
+#endif
+}
+#endif 
 
 #ifdef APP_WEBCLIENT
 void webclient_closed(void)
