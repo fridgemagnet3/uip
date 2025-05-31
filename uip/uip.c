@@ -1130,6 +1130,12 @@ uip_process(u8_t flag)
       goto udp_found;
     }
   }
+  
+  // if we've not got an IP address, silently drop this
+  // (avoids log noise if waiting for a DHCP assigned address)
+  if (uip_ipaddr_cmp(uip_hostaddr,all_zeroes_addr) )
+    goto drop ;
+    
   // don't generate log noise if this is a broadcast packet
   // that isn't meant for us
   if ( !(uip_ipaddr_cmp(BUF->destipaddr, all_ones_addr) ||

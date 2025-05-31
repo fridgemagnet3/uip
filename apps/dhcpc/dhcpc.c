@@ -31,8 +31,12 @@
  * @(#)$Id: dhcpc.c,v 1.2 2006/06/11 21:46:37 adam Exp $
  */
 
+#ifndef _CMOC_VERSION_
 #include <stdio.h>
 #include <string.h>
+#else
+#include <cmoc.h>
+#endif
 
 #include "uip.h"
 #include "dhcpc.h"
@@ -170,7 +174,7 @@ send_discover(void)
   u8_t *end;
   struct dhcp_msg *m = (struct dhcp_msg *)uip_appdata;
 
-  printf("send_discover\n") ;
+  printf("DHCP:send_discover\n") ;
 
   create_msg(m);
 
@@ -187,7 +191,7 @@ send_request(void)
   u8_t *end;
   struct dhcp_msg *m = (struct dhcp_msg *)uip_appdata;
 
-  printf("send_request\n") ;
+  printf("DHCP: send_request\n") ;
 
   create_msg(m);
   
@@ -250,10 +254,10 @@ parse_msg(void)
 /*---------------------------------------------------------------------------*/
 static void handle_dhcp(void)
 {
+  uip_ipaddr_t broadcast_mask ;
+  
   if ( s.state==STATE_DONE )
     return ;
-  printf("s.state=%d\n", s.state) ;
-  printf("s.ticks=%d\n", s.ticks) ;
 
   switch(s.state)
   {
@@ -284,20 +288,33 @@ static void handle_dhcp(void)
       
     case STATE_CONFIG_RECEIVED :
     
-     printf("Got IP address %d.%d.%d.%d\n",
-      uip_ipaddr1(s.ipaddr), uip_ipaddr2(s.ipaddr),
-      uip_ipaddr3(s.ipaddr), uip_ipaddr4(s.ipaddr));
-     printf("Got netmask %d.%d.%d.%d\n",
-      uip_ipaddr1(s.netmask), uip_ipaddr2(s.netmask),
-      uip_ipaddr3(s.netmask), uip_ipaddr4(s.netmask));
-     printf("Got DNS server %d.%d.%d.%d\n",
-      uip_ipaddr1(s.dnsaddr), uip_ipaddr2(s.dnsaddr),
-      uip_ipaddr3(s.dnsaddr), uip_ipaddr4(s.dnsaddr));
-     printf("Got default router %d.%d.%d.%d\n",
-      uip_ipaddr1(s.default_router), uip_ipaddr2(s.default_router),
-      uip_ipaddr3(s.default_router), uip_ipaddr4(s.default_router));
-     printf("Lease expires in %ld seconds\n",
+      printf("Got IP address %d.%d.%d.%d\n",
+        uip_ipaddr1(s.ipaddr), uip_ipaddr2(s.ipaddr),
+        uip_ipaddr3(s.ipaddr), uip_ipaddr4(s.ipaddr));
+      printf("Got netmask %d.%d.%d.%d\n",
+        uip_ipaddr1(s.netmask), uip_ipaddr2(s.netmask),
+        uip_ipaddr3(s.netmask), uip_ipaddr4(s.netmask));
+      printf("Got DNS server %d.%d.%d.%d\n",
+        uip_ipaddr1(s.dnsaddr), uip_ipaddr2(s.dnsaddr),
+        uip_ipaddr3(s.dnsaddr), uip_ipaddr4(s.dnsaddr));
+      printf("Got default router %d.%d.%d.%d\n",
+        uip_ipaddr1(s.default_router), uip_ipaddr2(s.default_router),
+        uip_ipaddr3(s.default_router), uip_ipaddr4(s.default_router));
+      printf("Lease expires in %ld seconds\n",
 	     ntohs(s.lease_time[0])*65536ul + ntohs(s.lease_time[1]));
+	  
+	  // compute the broadcast address
+      uip_ipaddr_mask(s.broadcast_addr,s.ipaddr,s.netmask) ;
+      broadcast_mask[0] = ~s.netmask[0] ;
+      broadcast_mask[1] = ~s.netmask[1] ;
+      s.broadcast_addr[0]|=broadcast_mask[0] ;
+      s.broadcast_addr[1]|=broadcast_mask[1] ;
+      printf("Broadcast addr %d.%d.%d.%d\n", 
+       uip_ipaddr1(s.broadcast_addr),
+       uip_ipaddr2(s.broadcast_addr),
+       uip_ipaddr3(s.broadcast_addr),
+       uip_ipaddr4(s.broadcast_addr)) ;
+	    
       dhcpc_configured(&s);
       s.state = STATE_DONE ;
       break ;

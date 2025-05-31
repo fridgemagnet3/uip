@@ -50,6 +50,8 @@ struct dhcpc_state {
   u16_t netmask[2];
   u16_t dnsaddr[2];
   u16_t default_router[2];
+  // computed from above
+  u16_t broadcast_addr[2];
 };
 
 void dhcpc_init(const void *mac_addr, int mac_len);

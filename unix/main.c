@@ -213,7 +213,9 @@ dhcpc_configured(const struct dhcpc_state *s)
 {
   uip_sethostaddr(s->ipaddr);
   uip_setnetmask(s->netmask);
-  uip_setdraddr(s->default_router);
+  uip_setdraddr(s->default_router); 
+  uip_setbroadcast(s->broadcast_addr) ;
+  
 #ifdef APP_RESOLV
   resolv_conf(s->dnsaddr);
 #endif
