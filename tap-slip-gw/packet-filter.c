@@ -1,13 +1,17 @@
 #include "packet-filter.h"
 #include <string.h>
+#include <arpa/inet.h>
 #ifdef linux
 #include <net/ethernet.h>
-#else
-#include "ethernet.h"
-#endif
-#include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
+#else
+#include "ethernet.h"
+#include "ip.h"
+#include "udp.h"
+#include <lwip/sockets.h>
+#define ETH_ALEN ETHER_ADDR_LEN
+#endif
 
 #define MAX_UDP_PORTS 256
 

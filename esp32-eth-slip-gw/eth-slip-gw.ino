@@ -6,6 +6,7 @@
 #include <ETH.h>
 #include "config.h"
 #include "ethernet.h"
+#include "packet-filter.h"
 
 #define SLIP_END     0300
 #define SLIP_ESC     0333
@@ -56,6 +57,10 @@ static esp_err_t EthRxFrameCBack(esp_eth_handle_t Handle, uint8_t *Buffer, uint3
   uint8_t Byte ;
 
   Serial.println("EthRxFrameCBack");
+
+  // apply packet filtering logic
+  if ( filter_packet(Buffer,Length))
+    return ESP_OK ;
 
   // transfer the frame as a SLIP packet
   Serial1.write(SLIP_END) ;
@@ -194,6 +199,9 @@ void setup()
   // eseentially notification of ethernet connected/disconnected
   Network.onEvent(onEvent);
 
+  // packet filter
+  enable_udp_broadcast(FILTER_UDP_BROADCASTS);
+  
   // configure and start the Ethernet interface
   ETH.begin(ETH_PHY_TYPE, 
             ETH_PHY_ADDR, 
