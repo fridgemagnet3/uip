@@ -359,7 +359,8 @@ dhcpc_init(const void *mac_addr, int mac_len)
 void
 dhcpc_appcall(void)
 {
-  handle_dhcp();
+  if(s.conn->lport == HTONS(DHCPC_CLIENT_PORT)) 
+    handle_dhcp();
 }
 /*---------------------------------------------------------------------------*/
 void

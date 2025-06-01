@@ -443,8 +443,11 @@ resolv_conf(u16_t *dnsserver)
   if(resolv_conn != NULL) {
     uip_udp_remove(resolv_conn);
   }
-  
+#ifdef _CMOC_VERSION_  
   resolv_conn = uip_udp_new(dnsserver, HTONS(53));
+#else
+  resolv_conn = uip_udp_new((uip_ipaddr_t*)dnsserver, HTONS(53));
+#endif
 }
 /*---------------------------------------------------------------------------*/
 /**

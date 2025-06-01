@@ -44,9 +44,12 @@
 #ifndef __RESOLV_H__
 #define __RESOLV_H__
 
+#ifndef UIP_UDP_APPCALL
 typedef int uip_udp_appstate_t;
-void resolv_appcall(void);
 #define UIP_UDP_APPCALL resolv_appcall
+#endif
+
+void resolv_appcall(void);
 
 #include "uipopt.h"
 

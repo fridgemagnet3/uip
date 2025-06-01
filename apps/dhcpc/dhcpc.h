@@ -61,8 +61,9 @@ void dhcpc_appcall(void);
 
 void dhcpc_configured(const struct dhcpc_state *s);
 
+#ifndef UIP_UDP_APPCALL
 typedef struct dhcpc_state uip_udp_appstate_t;
 #define UIP_UDP_APPCALL dhcpc_appcall
-
+#endif
 
 #endif /* __DHCPC_H__ */
