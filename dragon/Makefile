@@ -8,8 +8,8 @@ all: libuip.a libapps.a UIP.BIN
 CC     = cmoc
 AR     = lwar
 # define the apps included in the binary
-APPS   = telnetd solar-udp
-#APPS    = webclient resolv
+APPS   = telnetd weather-udp solar-udp callchain
+#APPS    = webclient resolv callchain
 CFLAGS+= -I../uip -I../lib -I. -I../time --dragon -c 
 #CFLAGS+= -DSERIAL_DRIVER
 
@@ -33,6 +33,9 @@ CFLAGS+=-DAPP_RESOLV
 endif
 ifneq (,$(findstring dhcpc,$(APPS)))
 CFLAGS+=-DAPP_DHCPC
+endif
+ifneq (,$(findstring callchain,$(APPS)))
+CFLAGS+=-DAPP_CALLCHAIN
 endif
 
 ARFLAGS = -c

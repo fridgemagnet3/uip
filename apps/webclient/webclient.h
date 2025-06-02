@@ -69,8 +69,10 @@ struct webclient_state {
   char mimetype[32];
 };
 
+#ifndef UIP_APPCALL
 typedef struct webclient_state uip_tcp_appstate_t;
 #define UIP_APPCALL webclient_appcall
+#endif
 
 /**
  * Callback function that is called from the webclient code when HTTP

@@ -146,7 +146,11 @@ typedef unsigned short uip_stats_t;
 #define UIP_CONF_STATISTICS      1
 
 /* Here we include the header file for the application(s) we use in
-   our project. */
+   our project. Note that if multiple applications are defined, unless
+   the callchain app is used, only (the first listed here per protocol)
+   will be serviced. These should also be included with the application
+   that has the largest appstate data FIRST (per protocol) to ensure 
+   enough space is reserved. */
 #ifdef APP_SMTP
 #include "smtp.h"
 #endif
@@ -170,6 +174,10 @@ typedef unsigned short uip_stats_t;
 #endif
 #ifdef APP_SOLARUDP
 #include "solar-udp.h"
+#endif
+// this must be the last thing in the list
+#ifdef APP_CALLCHAIN
+#include "app-callchain.h"
 #endif
 
 #endif /* __UIP_CONF_H__ */

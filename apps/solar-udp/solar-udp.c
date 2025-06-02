@@ -176,16 +176,6 @@ void solar_udp_appcall(void)
         printf("%s\n",solar_data);
     }
   }
-#ifdef APP_WEATHERUDP
-  // since only one app can be defined to UIP, we ensure this is 
-  // included in uip-conf.h first which means we get called first. 
-  // as such, we're then responsible for calling the weather app if 
-  // it's defined
-  
-  extern void weather_udp_appcall(void);
-  
-  weather_udp_appcall() ;
-#endif
 }
 
 void solar_udp_init(void)
