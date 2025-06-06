@@ -28,6 +28,47 @@ void uip_add32(u8_t *op32, u16_t op16)
   }
 }
 
+// common IP checksum algorithm
+static u16_t chksum(u16_t sum, void *sdata, u16_t len)
+{
+  u16_t csm ;
+  
+  asm
+  {
+    pshs y
+    ; loop counter
+    ldy :len
+    ; addr of data
+    ldx :sdata
+    ; running checksum
+    ldd :sum
+    ; test for <2 bytes remaining 
+lp: cmpy #2
+    blo endbyt
+    ; decr len
+    leay -2,y
+    ; add next word
+    addd ,x++
+    ; test for carry - add 1 if so
+    bcc lp
+    addd #1
+    bra lp
+endbyt:
+    ; either have 0 or 1 byte remaining
+    ; if zero then done
+    cmpy #0
+    beq end
+    ; add final byte 
+    adda ,x
+    ; test for carry of hi-byte
+    bcc end
+    addd #1
+end:
+    std :csm
+    puls y
+  }
+  return csm ;
+}
 
 /*
  * Copyright (c) 2001, Adam Dunkels.
@@ -66,82 +107,53 @@ void uip_add32(u8_t *op32, u16_t op16)
  *
  */
 
+// JRB: After a few iterations, this code is now essentially just a copy
+// of that in 'uip.c', it's just making use of the optimised assember above
+// to do the actual checksum calculation
+//
+
 #define BUF ((struct uip_tcpip_hdr *)&uip_buf[UIP_LLH_LEN])
 
-#define IP_PROTO_TCP    6
-
-static u16_t
-chksum(u16_t *sdata, u16_t len)
+/*-----------------------------------------------------------------------------------*/
+u16_t uip_ipchksum(void)
 {
-  u16_t acc;
-  
-  for(acc = 0; len > 1; len -= 2) {
-    acc += *sdata;
-    if(acc < *sdata) {
-      /* Overflow, so we add the carry to acc (i.e., increase by
-         one). */
-      ++acc;
-    }
-    ++sdata;
-  }
-
-  /* add up any odd byte */
-  if(len == 1) {
-    acc += htons(((u16_t)(*(u8_t *)sdata)) << 8);
-    if(acc < htons(((u16_t)(*(u8_t *)sdata)) << 8)) {
-      ++acc;
-    }
-  }
-
-  return acc;
+  return chksum(0,(u16_t *)&uip_buf[UIP_LLH_LEN], 20);
 }
 /*-----------------------------------------------------------------------------------*/
-u16_t
-uip_ipchksum(void)
+
+static u16_t upper_layer_chksum(u8_t proto)
 {
-  return chksum((u16_t *)&uip_buf[UIP_LLH_LEN], 20);
+  u16_t upper_layer_len;
+  u16_t sum;
+  
+#if UIP_CONF_IPV6
+  upper_layer_len = (((u16_t)(BUF->len[0]) << 8) + BUF->len[1]);
+#else /* UIP_CONF_IPV6 */
+  upper_layer_len = (((u16_t)(BUF->len[0]) << 8) + BUF->len[1]) - UIP_IPH_LEN;
+#endif /* UIP_CONF_IPV6 */
+  
+  /* First sum pseudoheader. */
+  
+  /* IP protocol and length fields. This addition cannot carry. */
+  sum = upper_layer_len + proto;
+  /* Sum IP source and destination addresses. */
+  sum = chksum(sum, (u8_t *)&BUF->srcipaddr[0], 2 * sizeof(uip_ipaddr_t));
+
+  /* Sum TCP header and data. */
+  sum = chksum(sum, &uip_buf[UIP_IPH_LEN + UIP_LLH_LEN],
+	       upper_layer_len);
+    
+  return (sum == 0) ? 0xffff : htons(sum);
 }
-/*-----------------------------------------------------------------------------------*/
-u16_t
-uip_tcpchksum(void)
+
+u16_t uip_tcpchksum(void)
 {
-  u16_t hsum, sum;
-
-  
-  /* Compute the checksum of the TCP header. */
-  hsum = chksum((u16_t *)&uip_buf[20 + UIP_LLH_LEN], 20);
-
-  /* Compute the checksum of the data in the TCP packet and add it to
-     the TCP header checksum. */
-  sum = chksum((u16_t *)uip_appdata,
-	       (u16_t)(((((u16_t)(BUF->len[0]) << 8) + BUF->len[1]) - 40)));
-
-  if((sum += hsum) < hsum) {
-    ++sum;
-  }
-  
-  if((sum += BUF->srcipaddr[0]) < BUF->srcipaddr[0]) {
-    ++sum;
-  }
-  if((sum += BUF->srcipaddr[1]) < BUF->srcipaddr[1]) {
-    ++sum;
-  }
-  if((sum += BUF->destipaddr[0]) < BUF->destipaddr[0]) {
-    ++sum;
-  }
-  if((sum += BUF->destipaddr[1]) < BUF->destipaddr[1]) {
-    ++sum;
-  }
-  if((sum += (u16_t)htons((u16_t)IP_PROTO_TCP)) < (u16_t)htons((u16_t)IP_PROTO_TCP)) {
-    ++sum;
-  }
-
-  hsum = (u16_t)htons((((u16_t)(BUF->len[0]) << 8) + BUF->len[1]) - 20);
-  
-  if((sum += hsum) < hsum) {
-    ++sum;
-  }
-  
-  return sum;
+  return upper_layer_chksum(UIP_PROTO_TCP);
 }
+
+u16_t uip_udpchksum(void)
+{
+  return upper_layer_chksum(UIP_PROTO_UDP);
+}
+
 /*-----------------------------------------------------------------------------------*/

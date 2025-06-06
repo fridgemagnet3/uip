@@ -159,6 +159,11 @@ typedef unsigned short uip_stats_t;
  
 // we provide a custom 32 bit addition
 #define UIP_ARCH_ADD32 1
+// we provide all checksum routines
+#define UIP_ARCH_CHKSUM 1
+
+// These two are probably redundant now because UIP_ARCH_CHKSUM
+// takes precendence but whatever...
 // we provide a custom IP checksum
 #define UIP_ARCH_IPCHKSUM 1
 // and a custom TCP checksum
