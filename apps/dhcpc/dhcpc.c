@@ -284,7 +284,8 @@ static void handle_dhcp(void)
     
       if(uip_newdata() && parse_msg() == DHCPACK) 
         s.state = STATE_CONFIG_RECEIVED;
-      break;
+      else
+        break;
       
     case STATE_CONFIG_RECEIVED :
     

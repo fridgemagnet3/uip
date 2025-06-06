@@ -191,8 +191,15 @@ void setup()
   // initialise serial port used for SLIP
   // increase RX buffer size 
   Serial1.setRxBufferSize(MAX_SIZE) ;
-  // RX1 = GPIO15, TX1 = GPIO16
-  Serial1.begin(19200, SERIAL_8N2, RX1, TX1);
+
+#ifndef FLOW_CONTROL1
+  Serial1.begin(19200, SERIAL_8N2, RXD1, TXD1);
+#else
+  Serial1.setPins(RXD1,TXD1,RTS1,CTS1);
+  Serial1.begin(19200, SERIAL_8N2) ;
+  Serial1.setHwFlowCtrlMode() ;
+#endif
+
   Serial1.setTimeout(100) ;
 
   // setup event handler for network events,
@@ -200,8 +207,22 @@ void setup()
   Network.onEvent(onEvent);
 
   // packet filter
-  enable_udp_broadcast(FILTER_UDP_BROADCASTS);
+#ifndef FILTER_UDP_BROADCASTS
+  enable_udp_broadcast(false) ;
+#else
+  enable_udp_broadcast(true);
   
+  // list of UDP ports to allow through the filter
+  const uint16_t UdpUnfilteredPorts[] = UDP_PORT_EXCLUSIONS ;
+  uint16_t i = 0 ;
+
+  while ( UdpUnfilteredPorts[i] )
+  {
+    enable_broadcast_udp_port(UdpUnfilteredPorts[i]) ;
+    i++ ;
+  }
+#endif
+
   // configure and start the Ethernet interface
   ETH.begin(ETH_PHY_TYPE, 
             ETH_PHY_ADDR, 

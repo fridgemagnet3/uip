@@ -13,7 +13,25 @@
 #define ETH_PHY_SPI_MISO 12
 #define ETH_PHY_SPI_MOSI 11
 
-// set to 1 to filter out UDP broadcast packets
-#define FILTER_UDP_BROADCASTS true
+// serial GPIO bins
+#define RXD1 15
+#define TXD1 16
+
+// define to enable hardware flow control
+#define FLOW_CONTROL1
+
+// hardware flow control pins
+// only used if FLOW_CONTROL1 is defined
+#define RTS1 17
+#define CTS1 21
+
+// define to filter UDP packets
+#define FILTER_UDP_BROADCASTS 
+
+// list of broadcast UDP ports excluded from filtering
+// only applicable if FILTER_UDP_BROADCASTS is defined
+// terminate list with a zero
+// 82 = DHCP
+#define UDP_PORT_EXCLUSIONS { 82, 0 }
 
 #endif
