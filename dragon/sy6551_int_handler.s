@@ -23,7 +23,7 @@ _install_6551_int_handler
 	LDA #159
 	STA reg_ctrl
 	; turn on the receiver & transmitter, enable RX interrupts
-	LDA #5
+	LDA #9
 	STA reg_cmd
 	RTS
 

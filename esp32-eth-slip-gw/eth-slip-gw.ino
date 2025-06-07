@@ -195,7 +195,7 @@ void setup()
 #ifndef FLOW_CONTROL1
   Serial1.begin(19200, SERIAL_8N2, RXD1, TXD1);
 #else
-  Serial1.setPins(RXD1,TXD1,RTS1,CTS1);
+  Serial1.setPins(RXD1,TXD1,CTS1,RTS1);
   Serial1.begin(19200, SERIAL_8N2) ;
   Serial1.setHwFlowCtrlMode() ;
 #endif

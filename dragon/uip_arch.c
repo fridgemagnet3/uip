@@ -31,8 +31,6 @@ void uip_add32(u8_t *op32, u16_t op16)
 // common IP checksum algorithm
 static u16_t chksum(u16_t sum, void *sdata, u16_t len)
 {
-  u16_t csm ;
-  
   asm
   {
     pshs y
@@ -64,10 +62,9 @@ endbyt:
     bcc end
     addd #1
 end:
-    std :csm
+    ; return is in d
     puls y
   }
-  return csm ;
 }
 
 /*
