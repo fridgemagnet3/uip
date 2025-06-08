@@ -25,18 +25,18 @@ bool filter_packet(uint8_t *pkt, uint16_t size)
   const uint8_t broadcast_mac[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } ;
   struct ether_header *frame_hdr = (struct ether_header*)pkt ;
 
+  // don't filter ARP requests
+  if ( frame_hdr->ether_type == htons(ETHERTYPE_ARP) )
+    return false ;
+  
+  // filter out all non IPv4 traffic
+  if ( frame_hdr->ether_type != htons(ETHERTYPE_IP) )
+    return true ;
+
   // test for broadcast MAC
   if ( !memcmp(frame_hdr->ether_dhost, broadcast_mac, ETH_ALEN ) )
   {
     // broadcast packet....
-    
-    // don't filter ARP requests
-    if ( frame_hdr->ether_type == htons(ETHERTYPE_ARP) )
-      return false ;
-    
-    // filter out all other non IPv4 traffic
-    if ( frame_hdr->ether_type != htons(ETHERTYPE_IP) )
-      return true ;
       
     struct ip *ip_hdr = (struct ip*)(pkt + sizeof(struct ether_header)) ;
     
