@@ -12,13 +12,15 @@ void weather_udp_appcall(void);
 // unused but needs to be defined
 typedef int uip_udp_appstate_t;
 #define UIP_UDP_APPCALL weather_udp_appcall
-typedef void(*output_str_t)(const char *str) ;
 #endif
 
 #include "uipopt.h"
 
 void weather_udp_init(void);
 
+#ifndef SOLAR_UDP_H
+typedef void(*output_str_t)(const char *str) ;
+#endif
 // output the weather data using the supplied callback
 void output_weather_data(output_str_t output_str_cback) ;
 

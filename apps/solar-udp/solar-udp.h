@@ -16,14 +16,15 @@ void solar_udp_appcall(void);
 // unused but needs to be defined
 typedef int uip_udp_appstate_t;
 #define UIP_UDP_APPCALL solar_udp_appcall
-typedef void(*output_str_t)(const char *str) ;
 #endif
+
+// output the solar metrics using the supplied callback
+typedef void(*output_str_t)(const char *str) ;
 
 #include "uipopt.h"
 
 void solar_udp_init(void);
 
-// output the solar metrics using the supplied callback
 void output_solar_metrics(output_str_t output_str_cback) ;
 
 #endif
