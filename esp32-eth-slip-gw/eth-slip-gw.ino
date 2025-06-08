@@ -56,7 +56,7 @@ static esp_err_t EthRxFrameCBack(esp_eth_handle_t Handle, uint8_t *Buffer, uint3
   uint32_t i ;
   uint8_t Byte ;
 
-  Serial.println("EthRxFrameCBack");
+  Serial.printf("EthRxFrameCBack: %u\n",Length);
 
   // apply packet filtering logic
   if ( filter_packet(Buffer,Length))
@@ -208,9 +208,9 @@ void setup()
 
   // packet filter
 #ifndef FILTER_UDP_BROADCASTS
-  enable_udp_broadcast(false) ;
+  enable_udp_broadcast(true) ;
 #else
-  enable_udp_broadcast(true);
+  enable_udp_broadcast(false);
   
   // list of UDP ports to allow through the filter
   const uint16_t UdpUnfilteredPorts[] = UDP_PORT_EXCLUSIONS ;

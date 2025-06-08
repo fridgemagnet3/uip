@@ -18,7 +18,7 @@
 #define TXD1 16
 
 // define to enable hardware flow control
-#define FLOW_CONTROL1
+//#define FLOW_CONTROL1
 
 // hardware flow control pins
 // only used if FLOW_CONTROL1 is defined
@@ -32,6 +32,6 @@
 // only applicable if FILTER_UDP_BROADCASTS is defined
 // terminate list with a zero
 // 82 = DHCP
-#define UDP_PORT_EXCLUSIONS { 82, 0 }
+#define UDP_PORT_EXCLUSIONS { 68, 0 }
 
 #endif
