@@ -36,6 +36,7 @@
 #include <string.h>
 #else
 #include <cmoc.h>
+//#define DHCP_STATUS
 #endif
 
 #include "uip.h"
@@ -101,46 +102,129 @@ static const u8_t magic_cookie[4] = {99, 130, 83, 99};
 static u8_t *
 add_msg_type(u8_t *optptr, u8_t type)
 {
+#ifdef _CMOC_VERSION_
+  asm
+  {
+    ldx :optptr
+    lda #DHCP_OPTION_MSG_TYPE
+    sta ,x+
+    lda #1
+    sta ,x+
+    lda :type
+    sta ,x+
+    tfr x,d
+  }
+#else
   *optptr++ = DHCP_OPTION_MSG_TYPE;
   *optptr++ = 1;
   *optptr++ = type;
   return optptr;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 static u8_t *
 add_server_id(u8_t *optptr)
 {
+#ifdef _CMOC_VERSION_
+  asm
+  {
+    ldx :optptr
+    lda #DHCP_OPTION_SERVER_ID
+    sta ,x+
+    lda #4
+    sta ,x+
+    pshs y
+    ; memcpy(optptr, s.serverid, 4);
+    leay :s.serverid
+    ldd ,y++
+    std ,x++
+    ldd ,y++
+    std ,x++
+    puls y
+    ; return in d
+    tfr x,d
+  }
+#else
   *optptr++ = DHCP_OPTION_SERVER_ID;
   *optptr++ = 4;
   memcpy(optptr, s.serverid, 4);
   return optptr + 4;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 static u8_t *
 add_req_ipaddr(u8_t *optptr)
 {
+#ifdef _CMOC_VERSION_
+  asm
+  {
+    ldx :optptr
+    lda #DHCP_OPTION_REQ_IPADDR
+    sta ,x+
+    lda #4
+    sta ,x+
+    pshs y
+    ; memcpy(optptr, s.ipaddr, 4);
+    leay :s.ipaddr
+    ldd ,y++
+    std ,x++
+    ldd ,y
+    std ,x++
+    puls y
+    tfr x,d
+  }
+#else
   *optptr++ = DHCP_OPTION_REQ_IPADDR;
   *optptr++ = 4;
   memcpy(optptr, s.ipaddr, 4);
   return optptr + 4;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 static u8_t *
 add_req_options(u8_t *optptr)
 {
+#ifdef _CMOC_VERSION_
+  asm
+  {
+    ldx :optptr
+    lda #DHCP_OPTION_REQ_LIST
+    sta ,x+
+    lda #3
+    sta ,x+
+    lda #DHCP_OPTION_SUBNET_MASK
+    sta ,x+
+    lda #DHCP_OPTION_ROUTER
+    sta ,x+
+    lda #DHCP_OPTION_DNS_SERVER
+    sta ,x+
+    tfr x,d
+  }
+#else
   *optptr++ = DHCP_OPTION_REQ_LIST;
   *optptr++ = 3;
   *optptr++ = DHCP_OPTION_SUBNET_MASK;
   *optptr++ = DHCP_OPTION_ROUTER;
   *optptr++ = DHCP_OPTION_DNS_SERVER;
   return optptr;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 static u8_t *
 add_end(u8_t *optptr)
 {
+#ifdef _CMOC_VERSION_
+  asm
+  {
+    ldx :optptr
+    lda #DHCP_OPTION_END
+    sta ,x+
+    tfr x,d
+  }
+#else
   *optptr++ = DHCP_OPTION_END;
   return optptr;
+#endif
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -155,16 +239,23 @@ create_msg(register struct dhcp_msg *m)
   m->flags = HTONS(BOOTP_BROADCAST); /*  Broadcast bit. */
   /*  uip_ipaddr_copy(m->ciaddr, uip_hostaddr);*/
   memcpy(m->ciaddr, uip_hostaddr, sizeof(m->ciaddr));
+#ifdef _CMOC_VERSION_
+  memset16(m->yiaddr, 0, (sizeof(m->yiaddr)+sizeof(m->siaddr)+sizeof(m->giaddr))/sizeof(u16_t));
+#else
   memset(m->yiaddr, 0, sizeof(m->yiaddr));
   memset(m->siaddr, 0, sizeof(m->siaddr));
   memset(m->giaddr, 0, sizeof(m->giaddr));
+#endif
   memcpy(m->chaddr, s.mac_addr, s.mac_len);
   memset(&m->chaddr[s.mac_len], 0, sizeof(m->chaddr) - s.mac_len);
 #ifndef UIP_CONF_DHCP_LIGHT
+#ifdef _CMOC_VERSION_
+  memset16(m->sname, 0, (sizeof(m->sname)+sizeof(m->file))/sizeof(u16_t));
+#else
   memset(m->sname, 0, sizeof(m->sname));
   memset(m->file, 0, sizeof(m->file));
 #endif
-
+#endif
   memcpy(m->options, magic_cookie, sizeof(magic_cookie));
 }
 /*---------------------------------------------------------------------------*/
@@ -174,7 +265,9 @@ send_discover(void)
   u8_t *end;
   struct dhcp_msg *m = (struct dhcp_msg *)uip_appdata;
 
+#ifdef DHCP_STATUS
   printf("DHCP:send_discover\n") ;
+#endif
 
   create_msg(m);
 
@@ -191,7 +284,9 @@ send_request(void)
   u8_t *end;
   struct dhcp_msg *m = (struct dhcp_msg *)uip_appdata;
 
+#ifdef DHCP_STATUS
   printf("DHCP: send_request\n") ;
+#endif
 
   create_msg(m);
   
@@ -288,7 +383,8 @@ static void handle_dhcp(void)
         break;
       
     case STATE_CONFIG_RECEIVED :
-    
+
+#ifdef DHCP_STATUS
       printf("Got IP address %d.%d.%d.%d\n",
         uip_ipaddr1(s.ipaddr), uip_ipaddr2(s.ipaddr),
         uip_ipaddr3(s.ipaddr), uip_ipaddr4(s.ipaddr));
@@ -303,19 +399,20 @@ static void handle_dhcp(void)
         uip_ipaddr3(s.default_router), uip_ipaddr4(s.default_router));
       printf("Lease expires in %ld seconds\n",
 	     ntohs(s.lease_time[0])*65536ul + ntohs(s.lease_time[1]));
-	  
+#endif
 	  // compute the broadcast address
       uip_ipaddr_mask(s.broadcast_addr,s.ipaddr,s.netmask) ;
       broadcast_mask[0] = ~s.netmask[0] ;
       broadcast_mask[1] = ~s.netmask[1] ;
       s.broadcast_addr[0]|=broadcast_mask[0] ;
       s.broadcast_addr[1]|=broadcast_mask[1] ;
+#ifdef DHCP_STATUS
       printf("Broadcast addr %d.%d.%d.%d\n", 
        uip_ipaddr1(s.broadcast_addr),
        uip_ipaddr2(s.broadcast_addr),
        uip_ipaddr3(s.broadcast_addr),
        uip_ipaddr4(s.broadcast_addr)) ;
-	    
+#endif	    
       dhcpc_configured(&s);
       s.state = STATE_DONE ;
       break ;

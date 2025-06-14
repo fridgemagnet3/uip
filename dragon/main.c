@@ -191,6 +191,7 @@ void resolv_found(char *name, u16_t *ipaddr)
 #ifdef APP_DHCPC
 void dhcpc_configured(const struct dhcpc_state *s)
 {
+  printf("DHCP configured\n") ;
   uip_sethostaddr(s->ipaddr);
   uip_setnetmask(s->netmask);
   uip_setdraddr(s->default_router); 
