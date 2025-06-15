@@ -2,7 +2,7 @@
 
 This is (currently) an early project to create an IPv4 stack for the old [Dragon 8-bit computer](https://en.wikipedia.org/wiki/Dragon_32/64), if my enthusasm continues, I plan to fiddle about with it to varying degrees over the next few months.
 
-I should start by saying that if you're looking to shuffle data from the Internet (eg. download a file or web page) there are far easier ways of accomplishing this. For example you could use the [Drivewire protocol](https://archive.worldofdragon.org/index.php?title=DriveWire), where you offload the actual IP protocol to a more modern/capable machine. There's no real obvious point to doing this other than it seemed an interesting (mad?) thing to do. Notionally I have this idea that the finished solution will be using something like the [ESP32 Ethernet kit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-ethernet-kit/user_guide.html) connected to the Dragon via RS232 but we're some way off that right now!
+I should start by saying that if you're looking to shuffle data from the Internet (eg. download a file or web page) there are far easier ways of accomplishing this. For example you could use the [Drivewire protocol](https://archive.worldofdragon.org/index.php?title=DriveWire), where you offload the actual IP protocol to a more modern/capable machine. There's no real obvious point to doing this other than it seemed an interesting (mad?) thing to do. 
 
 Originally I envisaged writing a very basic IP stack in assembler, really to just support the basic ARP and UDP protocols but then uncovered an archive of the UIP I'd downloaded about 10 years ago which seemed a better starting point (not least because it supports TCP as well).
 
@@ -10,7 +10,7 @@ At present the plan is for this to only run on a Dragon 64, not specifically bec
 
 ## Current status
 
-At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) AND a physical Dragon 64. When interfaced to a  [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP), it will respond to ping requests and the default configuration includes a simple telnet server application and a simple UDP based receiver of my own which listens on port 52005 and will display any textual data received. Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) but should work with any packets containing text. In the event it DOES contain solar JSON data, it will also decode & display it nicely:
+At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) AND a physical Dragon 64. When interfaced to a  [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP), it will respond to ping requests and the default configuration includes a simple telnet server application and a  UDP based receiver of my own which listens on port 52005 and will display any textual data received. Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) but should work with any packets containing text. In the event it DOES contain solar JSON data, it will also decode & display it nicely:
 
 ![solar-weather-metrics](https://github.com/user-attachments/assets/8e00a911-3eaf-4bd7-bc88-7a983dbc8233)
 
@@ -48,6 +48,8 @@ The telnet server also allows this data to be retrieved:
 Both the little webclient and DNS resolver applications should also work (although they're not currently enabled by default, should just be a case of adjusting the Makefile as needed). The webclient will work with or without the resover enabled (in case of the latter, you need to specify the web server by IP address) and will simply dump out the contents of the requested document. Both apps currently use IP addresses and names local to my network so will need changing to work. Just be aware that odds are if you try and connect to an external IP, it won't work unless you adjust your router/routing tables to connect to the subnet being used by the TAP interface.
 
 Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the select() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
+
+I also have an early prototype, standalone "network adapter" based around an [ESP32 microcontroller](/esp32-eth-slip-gw) which negates the need to use a Linux box as a gateway.
 
 ## How to build/run the stack (Xroar emulator)
 
