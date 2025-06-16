@@ -36,7 +36,7 @@
 #include <string.h>
 #else
 #include <cmoc.h>
-//#define DHCP_STATUS
+#define DHCP_STATUS
 #endif
 
 #include "uip.h"
@@ -138,7 +138,7 @@ add_server_id(u8_t *optptr)
     leay :s.serverid
     ldd ,y++
     std ,x++
-    ldd ,y++
+    ldd ,y
     std ,x++
     puls y
     ; return in d
@@ -385,16 +385,16 @@ static void handle_dhcp(void)
     case STATE_CONFIG_RECEIVED :
 
 #ifdef DHCP_STATUS
-      printf("Got IP address %d.%d.%d.%d\n",
+      printf("IP: %d.%d.%d.%d\n",
         uip_ipaddr1(s.ipaddr), uip_ipaddr2(s.ipaddr),
         uip_ipaddr3(s.ipaddr), uip_ipaddr4(s.ipaddr));
-      printf("Got netmask %d.%d.%d.%d\n",
+      printf("NETMASK: %d.%d.%d.%d\n",
         uip_ipaddr1(s.netmask), uip_ipaddr2(s.netmask),
         uip_ipaddr3(s.netmask), uip_ipaddr4(s.netmask));
-      printf("Got DNS server %d.%d.%d.%d\n",
+      printf("DNS SERVER: %d.%d.%d.%d\n",
         uip_ipaddr1(s.dnsaddr), uip_ipaddr2(s.dnsaddr),
         uip_ipaddr3(s.dnsaddr), uip_ipaddr4(s.dnsaddr));
-      printf("Got default router %d.%d.%d.%d\n",
+      printf("ROUTER: %d.%d.%d.%d\n",
         uip_ipaddr1(s.default_router), uip_ipaddr2(s.default_router),
         uip_ipaddr3(s.default_router), uip_ipaddr4(s.default_router));
       printf("Lease expires in %ld seconds\n",
@@ -407,7 +407,7 @@ static void handle_dhcp(void)
       s.broadcast_addr[0]|=broadcast_mask[0] ;
       s.broadcast_addr[1]|=broadcast_mask[1] ;
 #ifdef DHCP_STATUS
-      printf("Broadcast addr %d.%d.%d.%d\n", 
+      printf("BROADCAST: %d.%d.%d.%d\n", 
        uip_ipaddr1(s.broadcast_addr),
        uip_ipaddr2(s.broadcast_addr),
        uip_ipaddr3(s.broadcast_addr),

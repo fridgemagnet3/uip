@@ -83,8 +83,8 @@ int main(void)
       printf("Issuing DNS lookup...\n") ;
       resolv_query("monolith.onasticksoftware.net");
 #else
-    printf("Issuing web request...\n") ;
-    webclient_get("192.168.0.201", 80, "/index.html");
+      printf("Issuing web request...\n") ;
+      webclient_get("192.168.0.201", 80, "/index.html");
 #endif
     }
 #endif
