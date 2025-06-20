@@ -7,6 +7,17 @@
 #include "config.h"
 #include "ethernet.h"
 #include "packet-filter.h"
+#ifdef DWIRE_CLIENT
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/select.h>
+#endif
 
 #define SLIP_END     0300
 #define SLIP_ESC     0333
@@ -18,6 +29,11 @@
 static bool EthConnected = false ;
 // current MAC address of the SLIP client
 static char MacAddr[ETHER_ADDR_LEN] ;
+static uint32_t Lp = 1u ;
+
+#ifdef DWIRE_CLIENT
+static int Sfd = -1 ;
+#endif
 
 static esp_err_t EthRxFrameCBack(esp_eth_handle_t Handle, uint8_t *Buffer, uint32_t Length, void *Private) ;
 
@@ -56,11 +72,12 @@ static esp_err_t EthRxFrameCBack(esp_eth_handle_t Handle, uint8_t *Buffer, uint3
   uint32_t i ;
   uint8_t Byte ;
 
-  Serial.printf("EthRxFrameCBack: %u\n",Length);
-
   // apply packet filtering logic
   if ( filter_packet(Buffer,Length))
     return ESP_OK ;
+
+  Serial.printf("E") ;
+  Lp++ ;
 
   // transfer the frame as a SLIP packet
   Serial1.write(SLIP_END) ;
@@ -98,7 +115,8 @@ static void SlipSendEthFrame(void)
   size_t Rc ;
   uint8_t Byte ;
 
-  Serial.println("SlipSendEthFrame");
+  Serial.printf("S") ;
+  Lp++ ;
 
   // receive a SLIP packet
   while(!EofPacket)
@@ -147,7 +165,7 @@ static void SlipSendEthFrame(void)
     }
     if ( Rc < 0 )
     {
-      Serial.println("Timed out waiting for incoming SLIP packet");
+      Serial.println("\nTimed out waiting for incoming SLIP packet");
       break ;
     }
   }
@@ -182,11 +200,74 @@ static void SlipSendEthFrame(void)
     esp_eth_transmit(ETH.handle(),PktBuf,Len) ;
 }
 
+#ifdef DWIRE_CLIENT
+
+static void CloseDWireServer(void)
+{
+  close(Sfd) ;
+  Sfd = -1 ;
+  Serial.println("Closed connection to Drivewire server") ;
+}
+
+// receive any pending Drivewire serial data and send it to the server
+static void SendDWireSerialData(void)
+{
+  ssize_t BytesIn, BytesOut ;
+  uint8_t Buf[1024] ;
+
+  Serial.printf("d") ;
+  Lp++ ;
+
+  BytesIn = Serial2.readBytes(Buf,sizeof(Buf)) ;
+  
+  if ( BytesIn > 0 )
+  {
+    BytesOut = send(Sfd,Buf,BytesIn,0) ;
+    if ( BytesOut < 0 )
+    {
+      Serial.printf("send: %s\n",strerror(errno));
+      CloseDWireServer() ;
+    }
+    else if ( BytesOut != BytesIn )
+    {
+      Serial.println("\nFailed to send all data to server");
+      CloseDWireServer() ;
+    }
+  }
+}
+
+// receive any pending Drivewire server data and send it to the serial port
+static void SendDWireTcpData(void)
+{
+  ssize_t BytesIn, BytesOut ;
+  uint8_t Buf[1024] ;
+
+  Serial.printf("D") ;
+  Lp++ ;
+
+  // receive any pending TCP data
+  BytesIn = recv(Sfd,Buf,sizeof(Buf),0) ;
+
+  if ( BytesIn < 0 )
+  {
+    Serial.printf("\nrecv: %s\n",strerror(errno));
+    CloseDWireServer() ;
+  }
+  else
+  {
+    BytesOut = Serial2.write(Buf,BytesIn) ;
+    if ( BytesOut != BytesIn )
+      Serial.println("\nError sending Drivewire data to serial");
+  }
+}
+
+#endif
+
 void setup() 
 {
   // setup debug serial
   Serial.begin(115200);
-  Serial.println("Starting...");
+  Serial.println("Starting Ethernet SLIP gateway...");
 
   // initialise serial port used for SLIP
   // increase RX buffer size 
@@ -199,7 +280,6 @@ void setup()
   Serial1.begin(19200, SERIAL_8N2) ;
   Serial1.setHwFlowCtrlMode() ;
 #endif
-
   Serial1.setTimeout(100) ;
 
   // setup event handler for network events,
@@ -223,6 +303,66 @@ void setup()
   }
 #endif
 
+#ifdef DWIRE_CLIENT
+
+  IPAddress LocalIp ;
+
+  // connect to Wifi for Drivewire client
+  Serial.println("Connecting to WiFi for Drivewire client");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(SSID1, PWD1);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(F("."));
+  }
+  LocalIp = WiFi.localIP();
+  Serial.println(F("WiFi connected"));
+  Serial.println(LocalIp);
+
+  // create the socket used for Drivewire
+  Sfd = socket(AF_INET,SOCK_STREAM,0);
+  if ( Sfd < 0 )
+    Serial.println("Failed to create Drivewire client socket");
+  else
+  {
+    int NoDelay = 1 ;
+    struct sockaddr_in DestAddr ;
+
+    if ( setsockopt(Sfd,IPPROTO_TCP,TCP_NODELAY,&NoDelay,sizeof(int)) < 0 )
+      Serial.printf("Failed to set TCP_NODELAY on Drivewire client socket: %s\n",strerror(errno));
+
+      memset(&DestAddr,0,sizeof(DestAddr)) ;
+      DestAddr.sin_family = AF_INET;
+      inet_pton(AF_INET, DWIRE_SERVER_IP, &DestAddr.sin_addr);
+      DestAddr.sin_port = htons(DWIRE_TCP_PORT);
+
+      // connect to the server
+      if ( connect(Sfd,(struct sockaddr *)&DestAddr, sizeof(DestAddr)) < 0 )
+      {
+        Serial.printf("Failed to connect to Drivewire server: %s\n",strerror(errno)) ;
+        close(Sfd) ;
+        Sfd = -1 ;
+      }
+      else
+      {
+        Serial.println("Successfully connected to Drivewire server");
+
+        // start the Drivewire serial port
+        Serial2.begin(57600, SERIAL_8N1, RXD2, TXD2);
+        Serial2.setTimeout(10) ;
+#ifdef INVERT_RXD2        
+        Serial2.setRxInvert(true);
+#endif
+      }
+  }
+  Serial.println("D = Drivewire rx from server/tx to client");
+  Serial.println("d = Drivewire rx from client/tx to server");
+#endif
+  Serial.println("E = Ethernet rx/tx to SLIP");
+  Serial.println("S = SLIP rx/tx to Ethernet");
+  Serial.println("Ready to service connections");
+
   // configure and start the Ethernet interface
   ETH.begin(ETH_PHY_TYPE, 
             ETH_PHY_ADDR, 
@@ -240,9 +380,47 @@ void setup()
 
 void loop() 
 {
+  // poll for serial data on the SLIP interface
   if ( Serial1.available())
     SlipSendEthFrame() ;
+#ifdef DWIRE_CLIENT
+  // handle any pending Drivewire transactions
+  if ( Sfd >= 0 )
+  {
+    struct timeval Timeout ;
+
+    Timeout.tv_sec = 0 ;
+    fd_set FdSet ;
+
+    // check for and forward any serial data to the server
+    if ( Serial2.available())
+    {
+      SendDWireSerialData() ;
+      Timeout.tv_usec = 0 ;
+    }
+    else
+      Timeout.tv_usec = 10*1000 ; // 10ms
+
+    // check for and forward any server data to the serial client
+    FD_ZERO(&FdSet);
+    FD_SET(Sfd,&FdSet) ;
+    int Rc = select(Sfd+1,&FdSet,NULL,NULL,&Timeout) ;
+    if ( Rc < 0 )
+    {
+      Serial.printf("select failed: %s\n",strerror(errno)) ;
+      CloseDWireServer() ;
+    }
+    else if ( Rc > 0 )
+      SendDWireTcpData() ;
+  }
+#endif
   else
     delay(10) ;
+
+  if ( Lp > 80 )
+  {
+    Serial.printf("\n");
+    Lp = 1u;
+  }
 }
 

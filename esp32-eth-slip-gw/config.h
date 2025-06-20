@@ -13,7 +13,7 @@
 #define ETH_PHY_SPI_MISO 12
 #define ETH_PHY_SPI_MOSI 11
 
-// serial GPIO bins
+// serial GPIO pins
 #define RXD1 15
 #define TXD1 16
 
@@ -31,7 +31,37 @@
 // list of broadcast UDP ports excluded from filtering
 // only applicable if FILTER_UDP_BROADCASTS is defined
 // terminate list with a zero
-// 82 = DHCP
-#define UDP_PORT_EXCLUSIONS { 68, 0 }
+// 68 = DHCP
+// 52003 = weather data
+// 52005 = solar data
+#define UDP_PORT_EXCLUSIONS { 68, 52003, 52005, 0 }
+//#define UDP_PORT_EXCLUSIONS { 68, 0 }
+
+// define to operate as a Drivewire client over Wifi
+#define DWIRE_CLIENT
+
+// Drivewire client settings
+#ifdef DWIRE_CLIENT
+
+// Drivewire server TCP Port, default is 65504
+#ifndef DWIRE_TCP_PORT 
+#define DWIRE_TCP_PORT 65504
+#endif
+
+// Drivewire server IP
+#define DWIRE_SERVER_IP "192.168.0.201"
+
+// wifi settings
+#define SSID1 "your-wifi-ssid"
+#define PWD1 "your-wifi-password"
+
+// serial GPIO pins for Drivewire client
+#define RXD2 46
+#define TXD2 45
+
+// define to invert the RX line which negates the need to implement a hardware inverter on the Dragon side
+//#define INVERT_RXD2
+
+#endif
 
 #endif
