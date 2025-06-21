@@ -30,6 +30,43 @@ static time_t last_timestamp ;
 
 static int extract_quoted_string(const char *src, char *dst)
 {
+#ifdef _CMOC_VERSION_
+  asm
+  {
+    pshs y
+    ldx :src
+    ldy :dst
+    ; b=len
+    clrb
+    ; look for starting quote or end of string
+lstart
+    lda ,x+
+    beq err
+    cmpa #$22
+    bne lstart
+    ; look for ending quote or end of string
+lend
+    lda ,x+
+    beq err
+    cmpa #$22
+    beq end
+    ; store to dst, incr len
+    sta ,y+
+    incb
+    bra lend
+err
+    ; return -1
+    ldd #$ffff
+    bra ext
+end
+    ; b=len, return in d so just clear upper byte
+    clra
+    ; also conveniently terminates string
+    sta ,y
+ext
+    puls y
+  }
+#else
   char *start, *end ;
   int len ;
 
@@ -47,6 +84,7 @@ static int extract_quoted_string(const char *src, char *dst)
     }
   }
   return -1 ;
+#endif
 }
 
 // if the weather app is enabled, this also defines a display_str
