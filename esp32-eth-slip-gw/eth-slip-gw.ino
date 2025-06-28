@@ -114,6 +114,8 @@ static void SlipSendEthFrame(void)
   uint8_t *Ptr = PktBuf ;
   size_t Rc ;
   uint8_t Byte ;
+  unsigned long StartTime = millis() ;
+  const unsigned long Timeout = 5000u ;
 
   Serial.printf("S") ;
   Lp++ ;
@@ -140,17 +142,20 @@ static void SlipSendEthFrame(void)
         case SLIP_ESC :
         
           Rc = 0 ;
-          while ( !Rc )
+          while ( (!Rc) && ((millis() - StartTime ) < Timeout) )
           {
             Rc = Serial1.read(&Byte,1) ;
-            switch(Byte) 
+            if ( Rc > 0 )
             {
-              case SLIP_ESC_END:
-                Byte = SLIP_END;
-                break;
-              case SLIP_ESC_ESC:
-                Byte = SLIP_ESC;
-                break ;
+              switch(Byte) 
+              {
+                case SLIP_ESC_END:
+                  Byte = SLIP_END;
+                  break;
+                case SLIP_ESC_ESC:
+                  Byte = SLIP_ESC;
+                  break ;
+              }
             }
           }
           if ( Rc < 0 )
@@ -165,7 +170,12 @@ static void SlipSendEthFrame(void)
     }
     if ( Rc < 0 )
     {
-      Serial.println("\nTimed out waiting for incoming SLIP packet");
+      Serial.println("\nError reading serial data for SLIP packet");
+      break ;
+    }
+    if ( (millis() - StartTime ) > Timeout )
+    {
+      Serial.println("\nTimed out reading SLIP packet");
       break ;
     }
   }
@@ -185,10 +195,10 @@ static void SlipSendEthFrame(void)
       // address differs so update the driver
       Ret = esp_eth_ioctl(ETH.handle(), ETH_CMD_S_MAC_ADDR, FrameHdr->ether_shost);
       if (Ret != ESP_OK) 
-        Serial.printf("SPI Ethernet MAC address config failed: %d", Ret);
+        Serial.printf("\nSPI Ethernet MAC address config failed: %d", Ret);
       else
       {
-        Serial.println("Successfully set MAC address to SLIP client");
+        Serial.println("\nSuccessfully set MAC address to SLIP client");
         // save copy as current MAC
         memcpy(MacAddr,FrameHdr->ether_shost,ETHER_ADDR_LEN);
       }

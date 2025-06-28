@@ -61,9 +61,11 @@ int main(void)
 #endif
 #ifdef APP_RESOLV
     resolv_init();
+#ifndef APP_DHCPC  
     // address of DNS server
     uip_ipaddr(ipaddr, 192,168,0,201);
     resolv_conf(ipaddr);
+#endif
 #endif
 
   printf( "Entering main loop\n" ) ;

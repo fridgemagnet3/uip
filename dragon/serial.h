@@ -9,6 +9,11 @@
 // sizeof the serial RX ring buffer
 #define RX_RING_BUFZ 1024
 
+// if you want to locate the ring buffer at a specific
+// address, set it here otherwise it will be located in
+// the first graphics page
+#undef RX_RING_BUFFER_PTR
+
 void serial_init(void) ;
 
 // indicates if RX data is available

@@ -77,10 +77,14 @@ int main(void)
 
 void serial_init(void)
 {
+#ifndef RX_RING_BUFFER_PTR
   u8_t **p_graphics_base = (u8_t**)0xba ;
 
   // locate the ring buffer in the first graphics page  
   rx_ring_buffer = *p_graphics_base ;
+#else
+  rx_ring_buffer = (u8_t*)RX_RING_BUFFER_PTR ;
+#endif
   // initialise pointers
   ring_read_ptr = rx_ring_buffer ;
   ring_write_ptr = rx_ring_buffer ;

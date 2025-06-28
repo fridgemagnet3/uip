@@ -23,7 +23,7 @@
 // hardware flow control pins
 // only used if FLOW_CONTROL1 is defined
 #define RTS1 17
-#define CTS1 21
+#define CTS1 18
 
 // define to filter UDP packets
 #define FILTER_UDP_BROADCASTS 
