@@ -1,6 +1,6 @@
 # A Dragon IP stack using uIP
 
-This is (currently) an early project to create an IPv4 stack for the old [Dragon 8-bit computer](https://en.wikipedia.org/wiki/Dragon_32/64), if my enthusasm continues, I plan to fiddle about with it to varying degrees over the next few months.
+This is a project to create an IPv4 stack for the old [Dragon 8-bit computer](https://en.wikipedia.org/wiki/Dragon_32/64), if my enthusasm continues, I plan to fiddle about with it to varying degrees over the next few months.
 
 I should start by saying that if you're looking to shuffle data from the Internet (eg. download a file or web page) there are far easier ways of accomplishing this. For example you could use the [Drivewire protocol](https://archive.worldofdragon.org/index.php?title=DriveWire), where you offload the actual IP protocol to a more modern/capable machine. There's no real obvious point to doing this other than it seemed an interesting (mad?) thing to do. 
 
@@ -10,7 +10,13 @@ At present the plan is for this to only run on a Dragon 64, not specifically bec
 
 ## Current status
 
-At present, the stack builds and runs on a [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) AND a physical Dragon 64. When interfaced to a  [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP), it will respond to ping requests and the default configuration includes a simple telnet server application and a  UDP based receiver of my own which listens on port 52005 and will display any textual data received. Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) but should work with any packets containing text. In the event it DOES contain solar JSON data, it will also decode & display it nicely:
+At present the stack builds and runs on:
+
+- [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) using a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP)
+- Dragon 64 connected via serial to a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP)
+- Dragon 64 connected via serial (and suitable transceiver) to a [Waveshare ESP32-S3-ETH microcontroller](/esp32-eth-slip-gw) - work in progress
+
+The Dragon will respond to ping requests and the default configuration includes a simple telnet server application and a UDP based receiver of my own which listens on port 52005 and will display any textual data received. Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) but should work with any packets containing text. In the event it DOES contain solar JSON data, it will also decode & display it nicely:
 
 ![solar-weather-metrics](https://github.com/user-attachments/assets/8e00a911-3eaf-4bd7-bc88-7a983dbc8233)
 
@@ -45,11 +51,9 @@ The telnet server also allows this data to be retrieved:
 `RAINFALL    : 0 MM`\
 `uIP 1.0> `
 
-Both the little webclient and DNS resolver applications should also work (although they're not currently enabled by default, should just be a case of adjusting the Makefile as needed). The webclient will work with or without the resover enabled (in case of the latter, you need to specify the web server by IP address) and will simply dump out the contents of the requested document. Both apps currently use IP addresses and names local to my network so will need changing to work. Just be aware that odds are if you try and connect to an external IP, it won't work unless you adjust your router/routing tables to connect to the subnet being used by the TAP interface.
+Both the webclient and DNS resolver applications should also work (although they're not currently enabled by default, should just be a case of adjusting the Makefile as needed). The webclient will work with or without the resover enabled (in case of the latter, you need to specify the web server by IP address) and will simply dump out the contents of the requested document. Both apps currently use IP addresses and names local to my network so will need changing to work. Just be aware that odds are if you try and connect to an external IP, it won't work unless you adjust your router/routing tables to connect to the subnet being used by the TAP interface.
 
 Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the select() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
-
-I also have an early prototype, standalone "network adapter" based around an [ESP32 microcontroller](/esp32-eth-slip-gw) which negates the need to use a Linux box as a gateway.
 
 ## How to build/run the stack (Xroar emulator)
 
@@ -84,7 +88,7 @@ That last step allows you to run the application as a normal user (instead of 'r
 
 `./tap-slip-gw 192.168.3.1`
 
-There's normally a brief burst of network traffic which the Dragon takes a little while to digest but after a few seconds it should be able to __ping__ it:
+At which point you should then be able to __ping__ it:
 
 `ping 192.168.3.2`
 
@@ -94,9 +98,16 @@ and get responses back from the Dragon.
 
 ## Running on the Dragon 64
 
-For this, you'll need to wire up a serial cable between the Dragon and Linux machine. In addition to the usual 3-wires required (RX,TX,GND), I also recommend you wire up the flow control pins, from the Dragon side DTR to CTS and CTS to RTS. The [serial driver](dragon/serial.c) uses DTR to reduce (prevent?) receive overruns, it'll still work if you choose not to (although from memory, I think the 6551 requires CTS to be asserted before it will transmit) however you might see dropped bytes, particularly when sending large (>1KByte) packets.
+For this, you'll need to wire up a serial cable between the Dragon and Linux machine. As a minimum, you need to wire up RX,TX and GND. Note the following:
 
-As of [4862108](https://github.com/fridgemagnet3/uip/commit/4862108f67842cfb450d10b7e0e31bf8a1737191), I've re-engineering the serial driver to allow for a configurable RX ring buffer size (previously it was fixed at 256 bytes) as I was starting to see overruns whilst some of the sample applications were running. Additionally, I've relocated the buffer to the first graphics page in memory (nominally $600 or $C00 if a DOS is present). The default value is 1Kbytes and this seems to have improved things significantly, to the extent where hardware flow control may not be required but some more testing is required....
+- the Dragon will NOT receive anything unless CTS (input) is asserted
+- the Dragon will NOT transmit unless it has asserted DTR, the software automatically does this but also see below
+
+As such, I also recommend you wire up the flow control pins, from the Dragon side DTR to CTS and CTS to RTS. 
+
+The [serial driver](dragon/serial.c) uses DTR to reduce (prevent?) receive overruns and de-asserts DTR when transmitting large (>512K bytes or half the RX ring buffer size) packets. This means if you choose NOT to wire up the control lines, you may see receive overruns and additionally you can't just locally connect DTR to CTS without modifying the software as you'll potentially deadlock things. 
+
+As of [4862108](https://github.com/fridgemagnet3/uip/commit/4862108f67842cfb450d10b7e0e31bf8a1737191), I've re-engineered the serial driver to allow for a configurable RX ring buffer size (previously it was fixed at 256 bytes) as I was starting to see overruns whilst some of the sample applications were running. Additionally, I've relocated the buffer to the first graphics page in memory (nominally $600 or $C00 if a DOS is present). The default value is 1Kbytes and this seems to have improved things significantly, to the extent where hardware flow control may not be required but some more testing is required....
 
 Unsurprisingly, the build/setup process is pretty similiar when using the emulator. When building the stack, enable the serial driver:
 
@@ -113,7 +124,7 @@ Build the __tap-slip-gw__ app, this time when running it, pass in the name of th
 
 `./tap-slip-gw 192.168.3.1 0 /dev/ttyUSB0`
 
-Again, you'll need to allow a minute or two for the Dragon to digest the burst of traffic that tends to occur whenever a new interface is brought up but after that you should be able to successfully ping it and start playing with the other apps.
+At which point you should be able to successfully ping it and start playing with the other apps.
 
 ![PXL_20250524_133458707](https://github.com/user-attachments/assets/6a375ef9-8c43-4782-9505-a0aff4759a8e)
 
