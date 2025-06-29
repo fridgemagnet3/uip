@@ -7,6 +7,7 @@
 #include "config.h"
 #include "ethernet.h"
 #include "packet-filter.h"
+#include <atomic>
 #ifdef DWIRE_CLIENT
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -17,6 +18,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/select.h>
+#include <freertos/FreeRTOS.h>
 #endif
 
 #define SLIP_END     0300
@@ -29,7 +31,9 @@
 static bool EthConnected = false ;
 // current MAC address of the SLIP client
 static char MacAddr[ETHER_ADDR_LEN] ;
-static uint32_t Lp = 1u ;
+static bool MacSet = false ;
+// loop counter
+static std::atomic_uint32_t Lp = 1u ;
 
 #ifdef DWIRE_CLIENT
 static int Sfd = -1 ;
@@ -71,6 +75,11 @@ static esp_err_t EthRxFrameCBack(esp_eth_handle_t Handle, uint8_t *Buffer, uint3
   uint8_t *Ptr = (uint8_t*)Buffer ;
   uint32_t i ;
   uint8_t Byte ;
+
+  // discard everything till the MAC address of the SLIP client has been set
+  // ie. until we've received at least one packet
+  if ( !MacSet )
+    return ESP_OK ;
 
   // apply packet filtering logic
   if ( filter_packet(Buffer,Length))
@@ -115,7 +124,7 @@ static void SlipSendEthFrame(void)
   size_t Rc ;
   uint8_t Byte ;
   unsigned long StartTime = millis() ;
-  const unsigned long Timeout = 5000u ;
+  const unsigned long Timeout = 2000u ;
 
   Serial.printf("S") ;
   Lp++ ;
@@ -201,6 +210,7 @@ static void SlipSendEthFrame(void)
         Serial.println("\nSuccessfully set MAC address to SLIP client");
         // save copy as current MAC
         memcpy(MacAddr,FrameHdr->ether_shost,ETHER_ADDR_LEN);
+        MacSet = true ;
       }
     }
   }
@@ -271,6 +281,46 @@ static void SendDWireTcpData(void)
   }
 }
 
+// task to service Drivewire requests
+static void DWireServiceTask(void *Arg)
+{
+  while ( Sfd >= 0 )
+  {
+    struct timeval Timeout ;
+
+    Timeout.tv_sec = 0 ;
+    fd_set FdSet ;
+
+    // check for and forward any serial data to the server
+    if ( Serial2.available())
+    {
+      SendDWireSerialData() ;
+      Timeout.tv_usec = 0 ;
+    }
+    else
+      Timeout.tv_usec = 10*1000 ; // 10ms
+
+    // check for and forward any server data to the serial client
+    FD_ZERO(&FdSet);
+    FD_SET(Sfd,&FdSet) ;
+    int Rc = select(Sfd+1,&FdSet,NULL,NULL,&Timeout) ;
+    if ( Rc < 0 )
+    {
+      Serial.printf("select failed: %s\n",strerror(errno)) ;
+      CloseDWireServer() ;
+    }
+    else if ( Rc > 0 )
+      SendDWireTcpData() ;
+
+    if ( Lp > 80 )
+    {
+      Serial.printf("\n");
+      Lp = 1u;
+    }
+  }
+  vTaskDelete(NULL);
+}
+
 #endif
 
 void setup() 
@@ -286,9 +336,19 @@ void setup()
 #ifndef FLOW_CONTROL1
   Serial1.begin(19200, SERIAL_8N2, RXD1, TXD1);
 #else
-  Serial1.setPins(RXD1,TXD1,CTS1,RTS1);
+  Serial1.setPins(RXD1,TXD1,CTS1,-1);
   Serial1.begin(19200, SERIAL_8N2) ;
-  Serial1.setHwFlowCtrlMode() ;
+  // Currently, we only use CTS flow control ie. allow the Dragon to request
+  // us to stop transmitting. There's no real need to use RTS because we 
+  // should always be able to keep up with the Dragon sends. Additionally
+  // it's possible to get into a deadlock situation because RTS is normally
+  // automatically de-asserted when the ESP UART is half full (64-bytes) which
+  // can easily happen if the Dragon is transmitting a large packet, which is also
+  // the time when I de-assert DTR.
+  Serial1.setHwFlowCtrlMode(UART_HW_FLOWCTRL_CTS) ;
+  // If wired, assert RTS to indicate we're always ready to receive
+  pinMode(RTS1, OUTPUT);
+  digitalWrite(RTS1, LOW);
 #endif
   Serial1.setTimeout(100) ;
 
@@ -338,6 +398,7 @@ void setup()
   {
     int NoDelay = 1 ;
     struct sockaddr_in DestAddr ;
+    TaskHandle_t DWireTaskHandle ;
 
     if ( setsockopt(Sfd,IPPROTO_TCP,TCP_NODELAY,&NoDelay,sizeof(int)) < 0 )
       Serial.printf("Failed to set TCP_NODELAY on Drivewire client socket: %s\n",strerror(errno));
@@ -364,6 +425,10 @@ void setup()
 #ifdef INVERT_RXD2        
         Serial2.setRxInvert(true);
 #endif
+        // launch task to service drivewire client
+        xTaskCreate(DWireServiceTask,"DriveWireServiceTask",4096,NULL,2,&DWireTaskHandle) ;
+        if ( DWireTaskHandle == NULL )
+          Serial.println("Failed to create DriveWire service task");
       }
   }
   Serial.println("D = Drivewire rx from server/tx to client");
@@ -393,37 +458,6 @@ void loop()
   // poll for serial data on the SLIP interface
   if ( Serial1.available())
     SlipSendEthFrame() ;
-#ifdef DWIRE_CLIENT
-  // handle any pending Drivewire transactions
-  if ( Sfd >= 0 )
-  {
-    struct timeval Timeout ;
-
-    Timeout.tv_sec = 0 ;
-    fd_set FdSet ;
-
-    // check for and forward any serial data to the server
-    if ( Serial2.available())
-    {
-      SendDWireSerialData() ;
-      Timeout.tv_usec = 0 ;
-    }
-    else
-      Timeout.tv_usec = 10*1000 ; // 10ms
-
-    // check for and forward any server data to the serial client
-    FD_ZERO(&FdSet);
-    FD_SET(Sfd,&FdSet) ;
-    int Rc = select(Sfd+1,&FdSet,NULL,NULL,&Timeout) ;
-    if ( Rc < 0 )
-    {
-      Serial.printf("select failed: %s\n",strerror(errno)) ;
-      CloseDWireServer() ;
-    }
-    else if ( Rc > 0 )
-      SendDWireTcpData() ;
-  }
-#endif
   else
     delay(10) ;
 
