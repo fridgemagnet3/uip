@@ -423,5 +423,30 @@ uip_arp_out(void)
 }
 /*-----------------------------------------------------------------------------------*/
 
+// Generate an ARP announcement packet
+void uip_arp_announcement(void)
+{
+  // Ethernet header
+  memset(BUF->ethhdr.dest.addr, 0xff, 6);
+  memcpy(BUF->ethhdr.src.addr, uip_ethaddr.addr, 6);
+  // ARP - target MAC = 0, sender MAC *our* MAC
+  memset(BUF->dhwaddr.addr, 0x00, 6);
+  memcpy(BUF->shwaddr.addr, uip_ethaddr.addr, 6);
+  
+  // ARP - sender IP = *our* IP, target IP = *our* IP
+  uip_ipaddr_copy(BUF->dipaddr, uip_hostaddr);
+  uip_ipaddr_copy(BUF->sipaddr, uip_hostaddr);
+  BUF->opcode = HTONS(ARP_REQUEST); /* ARP request. */
+  BUF->hwtype = HTONS(ARP_HWTYPE_ETH);
+  BUF->protocol = HTONS(UIP_ETHTYPE_IP);
+  BUF->hwlen = 6;
+  BUF->protolen = 4;
+  BUF->ethhdr.type = HTONS(UIP_ETHTYPE_ARP);
+
+  uip_appdata = &uip_buf[UIP_TCPIP_HLEN + UIP_LLH_LEN];
+    
+  uip_len = sizeof(struct arp_hdr);
+}
+
 /** @} */
 /** @} */

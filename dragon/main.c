@@ -23,8 +23,7 @@ int main(void)
 
   slipdev_init();
   uip_init();
-  for(i=0;i<6;i++)
-    eth_mac_addr.addr[i] = mac_addr[i] ;
+  memcpy(eth_mac_addr.addr,mac_addr,sizeof(mac_addr)) ;
 
   // set our MAC
   uip_setethaddr(eth_mac_addr);
@@ -41,6 +40,13 @@ int main(void)
   // set broadcast
   uip_ipaddr(ipaddr, 192,168,3,255);
   uip_setbroadcast(ipaddr) ;
+  // generate an ARP announcement. The ESP-Eth-GW app won't
+  // send us any traffic until we first send a packet so
+  // this serves to satisfy that criteria.
+  // It's not required for DHCP since the first thing we do 
+  // is send out a broadcast packet for configuration...
+  uip_arp_announcement() ;
+  slipdev_send();
 #else
   dhcpc_init(&mac_addr, 6);
 #endif
