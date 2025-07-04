@@ -7,12 +7,18 @@
 // interrupt driven serial driver for the 6551
 
 // sizeof the serial RX ring buffer
-#define RX_RING_BUFZ 1024
+// by default, on a vanilla Dragon this will end at $c40
+// on a DOS system, $1240
+#define RX_RING_BUFZ 1600
 
 // if you want to locate the ring buffer at a specific
 // address, set it here otherwise it will be located in
 // the first graphics page
 #undef RX_RING_BUFFER_PTR
+
+// set to use hardware flow control (DTR), if undefined
+// 'clear_dtr' (below) does nothing
+#define HW_FLOW_CONTROL
 
 void serial_init(void) ;
 

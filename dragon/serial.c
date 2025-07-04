@@ -32,25 +32,14 @@
    than half the ring buffer size which should stop the Linux side
    sending during that period. In this mode, I've seen no overruns */
 
-// status bits for TX full in the 6551
-#define STAT_TX (1<<4)
+// DTR bit in the control 6551 cmd register
 #define CMD_DTR (1)
 
 static u8_t *sy6551_holding = (u8_t*)0xff04 ;
 static u8_t *sy6551_status = (u8_t*)0xff05 ;
 static u8_t *sy6551_cmd = (u8_t*)0xff06 ;
 
-// RX ring buffer 
-u8_t *rx_ring_buffer ;
-// end of the ring buffer
-u8_t *rx_ring_buffer_end ;
-// read pointer in ring buffer
-u8_t *ring_read_ptr ;
-// write pointer in ring buffer
-u8_t *ring_write_ptr ;
-// no. of overruns detected
-u8_t ring_overruns = 0u;
-
+// most of the functionality has now been moved into assembler...
 extern void install_6551_int_handler(void) ;
 extern void restore_int_handler(void) ;
 
@@ -77,59 +66,20 @@ int main(void)
 
 void serial_init(void)
 {
+  // setup ring buffer pointers
+  u8_t **p_rx_ring_buffer = (u8_t**)0xe6 ;
+  u8_t **p_rx_ring_buffer_end = (u8_t**)0xe8 ;
+  
 #ifndef RX_RING_BUFFER_PTR
-  u8_t **p_graphics_base = (u8_t**)0xba ;
-
   // locate the ring buffer in the first graphics page  
-  rx_ring_buffer = *p_graphics_base ;
+  u8_t **p_graphics_base = (u8_t**)0xba ;
+  *p_rx_ring_buffer = *p_graphics_base ;
 #else
-  rx_ring_buffer = (u8_t*)RX_RING_BUFFER_PTR ;
+  *p_rx_ring_buffer = (u8_t**)RX_RING_BUFFER_PTR ;
 #endif
-  // initialise pointers
-  ring_read_ptr = rx_ring_buffer ;
-  ring_write_ptr = rx_ring_buffer ;
-  rx_ring_buffer_end = rx_ring_buffer + RX_RING_BUFZ ;
+  *p_rx_ring_buffer_end = *p_rx_ring_buffer + RX_RING_BUFZ ;
+  
   install_6551_int_handler() ;
-}
-
-u8_t serial_rx_pending(void)
-{
-  return (ring_read_ptr != ring_write_ptr) ; 
-}
-
-u8_t serial_tx_empty(void)
-{
-  return (*sy6551_status) & STAT_TX ; 
-}
-
-// transmit works the same as in polled mode
-void serial_put(u8_t c)
-{
-  while(!serial_tx_empty() )
-  {
-  }
-  *sy6551_holding = c ;
-}
-
-u8_t serial_get(void)
-{
-  u8_t c ;
-  
-  while(ring_read_ptr == ring_write_ptr)
-  {
-  }
-  c = *ring_read_ptr++ ;
-  if ( ring_read_ptr == rx_ring_buffer_end )
-    ring_read_ptr = rx_ring_buffer ;
-  
-  return c ;
-}
-
-u8_t serial_overruns(void)
-{
-  u8_t c = ring_overruns ;
-  ring_overruns = 0u ;
-  return c ;
 }
 
 void set_dtr(void)
@@ -139,5 +89,7 @@ void set_dtr(void)
 
 void clear_dtr(void)
 {
+#ifdef HW_FLOW_CONTROL
   *sy6551_cmd = (*sy6551_cmd) & (~CMD_DTR) ;
+#endif
 }
