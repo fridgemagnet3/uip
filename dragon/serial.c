@@ -38,6 +38,7 @@
 static u8_t *sy6551_holding = (u8_t*)0xff04 ;
 static u8_t *sy6551_status = (u8_t*)0xff05 ;
 static u8_t *sy6551_cmd = (u8_t*)0xff06 ;
+static u8_t dtr_c ;
 
 // most of the functionality has now been moved into assembler...
 extern void install_6551_int_handler(void) ;
@@ -84,12 +85,16 @@ void serial_init(void)
 
 void set_dtr(void)
 {
-  *sy6551_cmd = (*sy6551_cmd) | CMD_DTR ;
+  dtr_c-- ;
+  if ( !dtr_c )
+    *sy6551_cmd = (*sy6551_cmd) | CMD_DTR ;
 }
 
 void clear_dtr(void)
 {
 #ifdef HW_FLOW_CONTROL
-  *sy6551_cmd = (*sy6551_cmd) & (~CMD_DTR) ;
+  if ( !dtr_c )
+    *sy6551_cmd = (*sy6551_cmd) & (~CMD_DTR) ;
 #endif
+  dtr_c++ ;
 }

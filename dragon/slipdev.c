@@ -155,14 +155,25 @@ unsigned int slipdev_read(void)
       goto start;
     }
     c = serial_get();
-    switch(c) {
+    switch(c) 
+    {
     case SLIP_END:
-      if(uip_len > 0) {
+      if(uip_len > 0) 
+      {
+#ifdef SERIAL_DRIVER
+        if ( serial_rx_ring_buffer_used() > RX_RING_BUFZ/2 )
+          clear_dtr() ;
+        else
+          set_dtr() ;
+#endif
         return uip_len;
-      } else {
-	goto start;
+      } 
+      else 
+      {
+	    goto start;
       }
       break;
+      
     case SLIP_ESC:
       c = serial_get();
       switch(c) {

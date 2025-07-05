@@ -1,5 +1,6 @@
 	SECTION bss
-irqvect RMB 2
+irqvect   RMB 2
+ringbufsz RMB 2
 	ENDSECTION
 	
 	SECTION code
@@ -12,19 +13,22 @@ reg_ctrl   EQU $FF07
 reg_tx	   EQU reg_rx
 
 ; store ring buffer pointer in zero page for efficiency
-_rx_ring_buffer     EQU $E6
-_rx_ring_buffer_end EQU $E8
-_ring_read_ptr      EQU $EA
-_ring_write_ptr     EQU $EC
-_ring_overruns      EQU $EE
+rx_ring_buffer     EQU $E6
+rx_ring_buffer_end EQU $E8
+ring_read_ptr      EQU $EA
+ring_write_ptr     EQU $EC
+ring_overruns      EQU $EE
 
 ; install the ISR handler
 _install_6551_int_handler
 	; setup the ring buffer pointers
-	LDX <_rx_ring_buffer
-	STX <_ring_read_ptr
-	STX <_ring_write_ptr
-	CLR <_ring_overruns
+	LDX <rx_ring_buffer
+	STX <ring_read_ptr
+	STX <ring_write_ptr
+	CLR <ring_overruns
+	LDD <rx_ring_buffer_end
+	SUBD <rx_ring_buffer
+	STD ringbufsz
 	; update the IRQ handler with ours
 	ORCC #$50
 	LEAX irq_handler,PCR
@@ -53,17 +57,11 @@ _restore_int_handler
 	
 _restore_int_handler EXPORT
 
-_rx_ring_buffer EXPORT
-_rx_ring_buffer_end EXPORT
-_ring_read_ptr EXPORT
-_ring_write_ptr EXPORT
-_ring_overruns EXPORT
-
 irq_handler
 	;LDA reg_status
 	;ANDA #4
 	;BEQ nrun
-	;INC _ring_overruns
+	;INC ring_overruns
 nrun
 	; check to see if interrupt is from the 6551, jump out if not
 	LDA reg_status
@@ -72,40 +70,58 @@ nrun
 	; read data from the ACIA
 	LDA reg_rx
 	; fetch current write pointer, increment
-	LDX <_ring_write_ptr
+	LDX <ring_write_ptr
 	STA ,X+
 	; check for end of ring buffer
-    CMPX <_rx_ring_buffer_end
-    BNE nring
-    LDX <_rx_ring_buffer
+	CMPX <rx_ring_buffer_end
+	BNE nring
+	LDX <rx_ring_buffer
 nring
 	;STX 1024
 	; check to see if we've wrapped, if so drop the byte
-	CMPX <_ring_read_ptr
+	CMPX <ring_read_ptr
 	BEQ drop
 	; update the next write offset
-	STX <_ring_write_ptr
+	STX <ring_write_ptr
 	; stay in the handler until a non ACIA interrupt kicks us out
 	SYNC
 	BRA irq_handler
 drop
 	; update overrun counter
-	INC <_ring_overruns
+	INC <ring_overruns
 	;INC 1028
 fin	JMP [irqvect]
 
 ; test for serial data in the ring buffer
 _serial_rx_pending
-	LDD <_ring_read_ptr
-	SUBD <_ring_write_ptr
+	CLRB
+	LDX <ring_read_ptr
+	CMPX <ring_write_ptr
+	BEQ rx_empty
+	INCB
+rx_empty
 	RTS
 
 _serial_rx_pending EXPORT
+	
+; get amount of space used
+_serial_rx_ring_buffer_used
+	LDD <ring_write_ptr
+	SUBD <ring_read_ptr
+	BCC rused_out
+	; read pointer ahead of write pointer
+	LDD ringbufsz
+	SUBD <ring_read_ptr
+	ADDD <ring_write_ptr
+rused_out
+	RTS
+
+_serial_rx_ring_buffer_used EXPORT
 
 ; fetch no of serial overruns
 _serial_overruns
-	LDB <_ring_overruns
-	CLR <_ring_overruns
+	LDB <ring_overruns
+	CLR <ring_overruns
 	RTS
 
 _serial_overruns EXPORT
@@ -113,18 +129,18 @@ _serial_overruns EXPORT
 ; fetch next byte from the ring buffer
 ; spin if none available
 _serial_get
-	LDX <_ring_read_ptr
-	CMPX <_ring_write_ptr
+	LDX <ring_read_ptr
+	CMPX <ring_write_ptr
 	BEQ _serial_get
 	; fetch next byte from ring buffer
 	; return in B
 	LDB ,X+
 	; text for wrap
-    CMPX <_rx_ring_buffer_end
+    CMPX <rx_ring_buffer_end
     BNE nrout
-    LDX <_rx_ring_buffer
+    LDX <rx_ring_buffer
 nrout
-	STX <_ring_read_ptr
+	STX <ring_read_ptr
 	RTS
 
 _serial_get EXPORT

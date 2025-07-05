@@ -37,6 +37,9 @@ u8_t serial_get(void) ;
 // return no. of RX overruns
 u8_t serial_overruns(void) ;
 
+// return no. of bytes pending in the rx ring buffer
+u16_t serial_rx_ring_buffer_used(void) ;
+
 // assert DTR
 void set_dtr(void) ;
 
