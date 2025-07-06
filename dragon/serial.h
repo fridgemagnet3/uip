@@ -41,7 +41,7 @@ u8_t serial_overruns(void) ;
 u16_t serial_rx_ring_buffer_used(void) ;
 
 // assert DTR
-void set_dtr(void) ;
+void set_dtr(u8_t force) ;
 
 // de-assert DTR 
 void clear_dtr(void) ;

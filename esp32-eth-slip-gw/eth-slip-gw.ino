@@ -335,6 +335,15 @@ void setup()
 
 #ifndef FLOW_CONTROL1
   Serial1.begin(19200, SERIAL_8N2, RXD1, TXD1);
+#ifdef RTS1
+  // if defined, assert RTS to indicate we're always ready to receive
+  pinMode(RTS1, OUTPUT);
+  digitalWrite(RTS1, LOW);
+#endif
+#ifdef CTS1
+  // if defined, ensure CTS pin is an input
+  pinMode(CTS1, INPUT);
+#endif
 #else
   Serial1.setPins(RXD1,TXD1,CTS1,-1);
   Serial1.begin(19200, SERIAL_8N2) ;
@@ -344,9 +353,9 @@ void setup()
   // it's possible to get into a deadlock situation because RTS is normally
   // automatically de-asserted when the ESP UART is half full (64-bytes) which
   // can easily happen if the Dragon is transmitting a large packet, which is also
-  // the time when I de-assert DTR.
+  // the time when it de-asserts DTR.
   Serial1.setHwFlowCtrlMode(UART_HW_FLOWCTRL_CTS) ;
-  // If wired, assert RTS to indicate we're always ready to receive
+  // Assert RTS to indicate we're always ready to receive
   pinMode(RTS1, OUTPUT);
   digitalWrite(RTS1, LOW);
 #endif

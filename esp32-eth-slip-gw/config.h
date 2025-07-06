@@ -20,8 +20,9 @@
 // define to enable hardware flow control
 //#define FLOW_CONTROL1
 
-// hardware flow control pins
-// only used if FLOW_CONTROL1 is defined
+// used if FLOW_CONTROL1 is defined but (if defined) also configured
+// for "normal" operation in 3-wire serial mode on the premise they
+// may still be wired up but not used by software...
 #define RTS1 17
 #define CTS1 18
 
@@ -34,8 +35,9 @@
 // 68 = DHCP
 // 52003 = weather data
 // 52005 = solar data
-#define UDP_PORT_EXCLUSIONS { 68, 52003, 52005, 0 }
-//#define UDP_PORT_EXCLUSIONS { 68, 0 }
+//#define UDP_PORT_EXCLUSIONS { 68, 52003, 52005, 0 }
+
+#define UDP_PORT_EXCLUSIONS { 68, 0 }
 
 // define to operate as a Drivewire client over Wifi
 #define DWIRE_CLIENT

@@ -102,9 +102,9 @@ slipdev_send(void)
   u8_t c;
 
 #ifdef SERIAL_DRIVER
-  // deassert DTR for sends over half the ring buffer size
+  // deassert DTR for large sends
   // to reduce overruns
-  if ( uip_len > (RX_RING_BUFZ/2) )
+  if ( uip_len > (UIP_CONF_BUFFER_SIZE/3) )
     clear_dtr() ;
 #endif
 
@@ -130,8 +130,7 @@ slipdev_send(void)
   serial_put(slip_end);
 
 #ifdef SERIAL_DRIVER
-  if ( uip_len > (RX_RING_BUFZ/2) )
-    set_dtr() ;
+  set_dtr(0) ;
 #endif
 }
 /*-----------------------------------------------------------------------------------*/
@@ -146,6 +145,10 @@ unsigned int slipdev_read(void)
   u8_t overruns = serial_overruns() ;
   if ( overruns )
     printf("serial overruns: %u\n", overruns ) ;
+  
+  // DTR needs to be clear regardless of amount in ring buffer
+  // as we may deadlock if there isn't a complete packet for us to read
+  set_dtr(1) ;
 #endif
 
  start:
@@ -161,10 +164,10 @@ unsigned int slipdev_read(void)
       if(uip_len > 0) 
       {
 #ifdef SERIAL_DRIVER
-        if ( serial_rx_ring_buffer_used() > RX_RING_BUFZ/2 )
+        // deassert DTR if there's still significant amount of data
+        // in the ring buffer
+        if ( serial_rx_ring_buffer_used() > (RX_RING_BUFZ/3) )
           clear_dtr() ;
-        else
-          set_dtr() ;
 #endif
         return uip_len;
       } 

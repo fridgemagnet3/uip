@@ -83,11 +83,15 @@ void serial_init(void)
   install_6551_int_handler() ;
 }
 
-void set_dtr(void)
+void set_dtr(u8_t force)
 {
-  dtr_c-- ;
-  if ( !dtr_c )
+  if ( dtr_c )
+    dtr_c-- ;
+  if ( !dtr_c || force )
+  {
     *sy6551_cmd = (*sy6551_cmd) | CMD_DTR ;
+    dtr_c = 0 ;
+  }
 }
 
 void clear_dtr(void)
