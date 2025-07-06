@@ -3,6 +3,10 @@
 #include "uip_arp.h"
 #include "timer.h"
 #include "slipdev.h"
+#ifdef WEB_GRAPHICS
+#include "graphics.h"
+#include "mapmode.h"
+#endif
 
 /* main processing loop, heavily generated from Unix version */
 
@@ -61,16 +65,21 @@ int main(void)
   weather_udp_init() ;
 #endif
 #ifdef APP_WEBCLIENT
-    u8_t key = 0 ;
-    webclient_init();
-    printf("Press a key to issue web request\n") ;
+  u8_t key = 0 ;
+  webclient_init();
+#ifdef WEB_GRAPHICS
+  // switch to map 1 (64K RAM mode) & copy BASIC ROM across
+  // to use hi memory as graphics RAM
+  switch_mapmode();
+#endif
+  printf("Press a key to issue web request\n") ;
 #endif
 #ifdef APP_RESOLV
-    resolv_init();
+  resolv_init();
 #ifndef APP_DHCPC  
-    // address of DNS server
-    uip_ipaddr(ipaddr, 192,168,0,201);
-    resolv_conf(ipaddr);
+  // address of DNS server
+  uip_ipaddr(ipaddr, 192,168,0,201);
+  resolv_conf(ipaddr);
 #endif
 #endif
 
@@ -92,9 +101,14 @@ int main(void)
       resolv_query("monolith.onasticksoftware.net");
 #else
       printf("Issuing web request...\n") ;
-      webclient_get("192.168.0.201", 80, "/index.html");
+#ifdef WEB_GRAPHICS
+      webclient_get("192.168.0.201", 80, "/dragon-logo.bin");
+#else
+      webclient_get("192.168.0.201", 80, "/dragon.txt");
+#endif
 #endif
     }
+
 #endif
 
     uip_len = slipdev_read();
@@ -190,7 +204,11 @@ void resolv_found(char *name, u16_t *ipaddr)
 	   htons(ipaddr[1]) & 0xff);
 #ifdef APP_WEBCLIENT	   
        printf("Issuing web request...\n") ;
-       webclient_get(name, 80, "/index.html");
+#ifdef WEB_GRAPHICS
+       webclient_get(name, 80, "/dragon-logo.bin");
+#else
+       webclient_get(name, 80, "/dragon.txt");
+#endif
 #endif       
   }
 }
@@ -212,9 +230,27 @@ void dhcpc_configured(const struct dhcpc_state *s)
 #endif 
 
 #ifdef APP_WEBCLIENT
+
+#ifdef WEB_GRAPHICS
+
+#define GRAPHICS_BASE ((char*)0xe000) 
+#define GRAPHICS_SIZE 6144
+
+static char *graphics_ptr ;
+static u16_t graphics_txfrd ;
+
+#endif
+
 void webclient_closed(void)
 {
   printf("Webclient: connection closed\n");
+#ifdef WEB_GRAPHICS
+  printf("Txfrd: %u\n",graphics_txfrd);
+  // switch to hi-res mode to display the downloaded image
+  pagex(GRAPHICS_BASE);
+  gmode(MODE6R) ;
+  css(1);
+#endif
 }
 
 void webclient_aborted(void)
@@ -228,10 +264,31 @@ void webclient_timedout(void)
 void webclient_connected(void)
 {
   printf("Webclient: connected, waiting for data...\n");
+#ifdef WEB_GRAPHICS
+  graphics_txfrd = 0u ;
+  graphics_ptr = GRAPHICS_BASE ;
+#endif
 }
+
 void webclient_datahandler(char *data, u16_t len)
 {
-  putstr(data,len);
-  //printf("Webclient: got %d bytes of data.\n", len);
+#ifdef WEB_GRAPHICS
+  printf("Webclient: got %d bytes\n", len);
+
+  if ( data )
+  {
+    // copy data to graphics memory
+    if ( (graphics_txfrd+len) <= GRAPHICS_SIZE)
+    {
+      memcpy(graphics_ptr,data,len) ;
+      graphics_ptr+=len ;
+      graphics_txfrd+=len ;
+    }
+  }
+  else
+    webclient_close() ;
+#else
+    putstr(data,len);
+#endif
 }
 #endif
