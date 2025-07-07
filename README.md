@@ -6,7 +6,7 @@ I should start by saying that if you're looking to shuffle data from the Interne
 
 Originally I envisaged writing a very basic IP stack in assembler, really to just support the basic ARP and UDP protocols but then uncovered an archive of the UIP I'd downloaded about 10 years ago which seemed a better starting point (not least because it supports TCP as well).
 
-At present the plan is for this to only run on a Dragon 64, not specifically because it has more memory than the 32 but that it has a RS232 port (which the 32 lacks). In theory it could run on a 32, using the parallel port as a bitbanger (this is after all what Drivewire does) but that's not something I'm planning on tackling any time soon.
+At present the plan is for this to only run on a Dragon 64, not specifically because it has more memory than the 32 (although one of the demos does make use of the 64's additional memory for displaying a bitmap), rather that it has a RS232 port (which the 32 lacks). It's unlikely to be able to run on a D32, using a bitbanger type port (in a similar vein to Drivewire) due to the asynchronous nature of network traffic.
 
 ## Current status
 
@@ -53,7 +53,7 @@ The telnet server also allows this data to be retrieved:
 
 Both the webclient and DNS resolver applications should also work (although they're not currently enabled by default, should just be a case of adjusting the Makefile as needed). The webclient will work with or without the resover enabled (in case of the latter, you need to specify the web server by IP address) and will simply dump out the contents of the requested document. Both apps currently use IP addresses and names local to my network so will need changing to work. Just be aware that odds are if you try and connect to an external IP, it won't work unless you adjust your router/routing tables to connect to the subnet being used by the TAP interface.
 
-Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the select() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
+Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the switch() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
 
 ## How to build/run the stack (Xroar emulator)
 
@@ -131,3 +131,18 @@ At which point you should be able to successfully ping it and start playing with
 Note that the serial driver will also work with the emulator however there's no real benefit in operating it in that mode, you'll need to throttle the transmits from the tap-slip-gw app in order to avoid massive overruns which ultimately makes everything run much slower. See my comments at the top of the [serial.c](dragon/serial.c) file.
 
 
+## Packet Filter
+
+There is a rudimentary packet filter built into both the [tap-slip-gw](/tap-slip-gw) and [esp32-eth-slip-gw](/esp32-eth-slip-gw) applications which serves to try and stop the Dragon from being overloaded with unrequired network traffic. The filter performs the following:
+
+- forwards any ARP packets (these are typically required for any higher level IP protocols to operate) to the Dragon (serial interface)
+- drops any non IPv4 packets
+  
+There is then a configurable option regarding the handling of UDP broadcast packets whereby the filter can operate in one of two modes:
+
+- forward all UDP broadcast packets to the Dragon
+- drop all UDP broadcast packets accept for those specifically allowed through via a list of port exceptions
+
+The [tap-slip-gw](/tap-slip-gw) application is set to drop all packets. Given the TAP interface is point to point, unless broadcast packets are specifically injected there is generally no need to let them through. This can of course be changed by modifying the software - see the [packet-filter.h](/tap-slip-gw/packet-filter.h) for details.
+
+The [esp32-eth-slip-gw](/esp32-eth-slip-gw) application is set to drop all packets except for DHCP. This behaviour can be changed via the settings in [esp32-eth-slip-gw/config.h](/esp32-eth-slip-gw/config.h). 
