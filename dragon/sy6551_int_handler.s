@@ -1,34 +1,13 @@
 	SECTION bss
 irqvect   RMB 2
-ringbufsz RMB 2
 	ENDSECTION
 	
 	SECTION code
 
-; sy6551 registers
-reg_rx     EQU $FF04
-reg_status EQU $FF05
-reg_cmd    EQU $FF06
-reg_ctrl   EQU $FF07
-reg_tx	   EQU reg_rx
-
-; store ring buffer pointer in zero page for efficiency
-rx_ring_buffer     EQU $E6
-rx_ring_buffer_end EQU $E8
-ring_read_ptr      EQU $EA
-ring_write_ptr     EQU $EC
-ring_overruns      EQU $EE
+ INCLUDE "serial_defs.s"
 
 ; install the ISR handler
 _install_6551_int_handler
-	; setup the ring buffer pointers
-	LDX <rx_ring_buffer
-	STX <ring_read_ptr
-	STX <ring_write_ptr
-	CLR <ring_overruns
-	LDD <rx_ring_buffer_end
-	SUBD <rx_ring_buffer
-	STD ringbufsz
 	; update the IRQ handler with ours
 	ORCC #$50
 	LEAX irq_handler,PCR
@@ -85,7 +64,9 @@ nring
 	STX <ring_write_ptr
 	; stay in the handler until a non ACIA interrupt kicks us out
 	SYNC
+	;LDA $ff02
 	BRA irq_handler
+	;BRA fin
 drop
 	; update overrun counter
 	INC <ring_overruns
@@ -104,20 +85,6 @@ rx_empty
 
 _serial_rx_pending EXPORT
 	
-; get amount of space used
-_serial_rx_ring_buffer_used
-	LDD <ring_write_ptr
-	SUBD <ring_read_ptr
-	BCC rused_out
-	; read pointer ahead of write pointer
-	LDD ringbufsz
-	SUBD <ring_read_ptr
-	ADDD <ring_write_ptr
-rused_out
-	RTS
-
-_serial_rx_ring_buffer_used EXPORT
-
 ; fetch no of serial overruns
 _serial_overruns
 	LDB <ring_overruns
@@ -125,46 +92,6 @@ _serial_overruns
 	RTS
 
 _serial_overruns EXPORT
-
-; fetch next byte from the ring buffer
-; spin if none available
-_serial_get
-	LDX <ring_read_ptr
-	CMPX <ring_write_ptr
-	BEQ _serial_get
-	; fetch next byte from ring buffer
-	; return in B
-	LDB ,X+
-	; text for wrap
-    CMPX <rx_ring_buffer_end
-    BNE nrout
-    LDX <rx_ring_buffer
-nrout
-	STX <ring_read_ptr
-	RTS
-
-_serial_get EXPORT
-
-; test for tx reg empty
-_serial_tx_empty
-	LDB reg_status
-	; return in B
-	ANDB #$10
-	RTS
-
-_serial_tx_empty EXPORT
-
-; tx a byte	
-_serial_put
-	LDB reg_status
-	ANDB #$10
-	BEQ _serial_put
-	; fetch param on stack
-	LDA 3,S
-	STA reg_tx
-	RTS
-
-_serial_put EXPORT
 
 	ENDSECTION
 	

@@ -49,9 +49,12 @@ LIBS+= -L./ -luip -lapps
 $(OBJECTDIR)/%.o: %.s
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-OBJS = $(addprefix $(OBJECTDIR)/, main.o clock-arch.o slipdev.o uip_arch.o serial.o sy6551_int_handler.o) 
+OBJS = $(addprefix $(OBJECTDIR)/, main.o clock-arch.o slipdev.o uip_arch.o) 
 ifneq (,$(findstring WEB_GRAPHICS,$(CFLAGS)))
 OBJS+=$(addprefix $(OBJECTDIR)/,mapmode.o graphics.o)
+endif
+ifneq (,$(findstring SERIAL_DRIVER,$(CFLAGS)))
+OBJS+=$(addprefix $(OBJECTDIR)/,sy6551_int_handler.o)
 endif
 
 UIP.BIN: $(OBJS) libuip.a libapps.a

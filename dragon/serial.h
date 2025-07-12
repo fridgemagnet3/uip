@@ -9,7 +9,7 @@
 // sizeof the serial RX ring buffer
 // by default, on a vanilla Dragon this will end at $c40
 // on a DOS system, $1240
-#define RX_RING_BUFZ 1600
+#define RX_RING_BUFZ 2048
 
 // if you want to locate the ring buffer at a specific
 // address, set it here otherwise it will be located in
@@ -20,16 +20,8 @@
 // 'clear_dtr' (below) does nothing
 #define HW_FLOW_CONTROL
 
-void serial_init(void) ;
-
 // indicates if RX data is available
 u8_t serial_rx_pending(void) ;
-
-// indicates if the TX output is empty
-u8_t serial_tx_empty(void) ;
-
-// write a byte
-void serial_put(u8_t c) ;
 
 // get a byte
 u8_t serial_get(void) ;
