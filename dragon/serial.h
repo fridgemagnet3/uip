@@ -9,7 +9,7 @@
 // sizeof the serial RX ring buffer
 // by default, on a vanilla Dragon this will end at $c40
 // on a DOS system, $1240
-#define RX_RING_BUFZ 2048
+#define RX_RING_BUFZ 1600
 
 // if you want to locate the ring buffer at a specific
 // address, set it here otherwise it will be located in
@@ -33,7 +33,7 @@ u8_t serial_overruns(void) ;
 u16_t serial_rx_ring_buffer_used(void) ;
 
 // assert DTR
-void set_dtr(u8_t force) ;
+void set_dtr(void) ;
 
 // de-assert DTR 
 void clear_dtr(void) ;

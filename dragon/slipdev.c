@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2001, Adam Dunkels.
+ *
  * Heavily modified for use with SY6551 ACIA on Dragon 64 by Jon Bird 
+ * (there's really not much left of the original!)
  *
  * All rights reserved. 
  *
@@ -61,9 +63,6 @@ static const unsigned char slip_end = SLIP_END,
 static u8_t *sy6551_holding = (u8_t*)0xff04 ;
 static u8_t *sy6551_status = (u8_t*)0xff05 ;
 static u8_t *sy6551_cmd = (u8_t*)0xff06 ;
-
-// DTR nested call tracker
-static u8_t dtr_c ;
 
 extern void install_6551_int_handler(void) ;
 
@@ -149,68 +148,10 @@ tx_end:
   }
 
 #ifdef SERIAL_DRIVER
-  set_dtr(0) ;
+  if ( uip_len > (UIP_CONF_BUFFER_SIZE/3) )
+    set_dtr() ;
 #endif
 }
-
-#ifndef SERIAL_DRIVER
-
-// routines for receiving data in simple
-// polled mode, only works when running in emulation
-
-u8_t serial_rx_pending(void)
-{
-  return (*sy6551_status) & STAT_RX ; 
-}
-
-u8_t serial_get(void)
-{
-  while(!serial_rx_pending() )
-  {
-  }
-  return *sy6551_holding ;
-}
-
-#else
-
-// get amount of used bytes in the ring buffer
-asm u16_t serial_rx_ring_buffer_used(void)
-{
-  asm
-  {
-    ldd <ring_write_ptr
-    subd <ring_read_ptr
-    bcc rused_out
-	; read pointer ahead of write pointer
-    ldd #RX_RING_BUFZ
-    subd <ring_read_ptr
-    addd <ring_write_ptr
-rused_out
-    rts
-  }
-}
-
-// read next byte from rx ring buffer
-asm u8_t serial_get(void)
-{
-  asm
-  {
-    ldx <ring_read_ptr
-    cmpx <ring_write_ptr
-    beq serial_get
-    ; fetch next byte from ring buffer
-    ; return in B
-    ldb ,X+
-    ; text for wrap
-    cmpx <rx_ring_buffer_end
-    bne nrout
-    ldx <rx_ring_buffer
-nrout
-    stx <ring_read_ptr
-    rts
-  }
-}
-#endif
 
 /*-----------------------------------------------------------------------------------*/
 unsigned int slipdev_read(void)
@@ -219,15 +160,11 @@ unsigned int slipdev_read(void)
 
  if ( !serial_rx_pending() )
    return 0 ;
-
+ 
 #ifdef SERIAL_DRIVER
   u8_t overruns = serial_overruns() ;
   if ( overruns )
     printf("serial overruns: %u\n", overruns ) ;
-  
-  // DTR needs to be clear regardless of amount in ring buffer
-  // as we may deadlock if there isn't a complete packet for us to read
-  set_dtr(1) ;
 #endif
 
   asm
@@ -286,12 +223,68 @@ rx_exit:
     puls y,u
   }
 
-#ifdef SERIAL_DRIVER
-  if ( serial_rx_ring_buffer_used() > (RX_RING_BUFZ/3) )
-    clear_dtr() ;
-#endif
   return uip_len ;
 }
+
+#ifndef SERIAL_DRIVER
+
+// routines for receiving data in simple
+// polled mode, only works when running in emulation
+
+u8_t serial_rx_pending(void)
+{
+  return (*sy6551_status) & STAT_RX ; 
+}
+
+u8_t serial_get(void)
+{
+  while(!serial_rx_pending() )
+  {
+  }
+  return *sy6551_holding ;
+}
+
+#else
+
+// read next byte from rx ring buffer
+asm u8_t serial_get(void)
+{
+  asm
+  {
+    ldx <ring_read_ptr
+    cmpx <ring_write_ptr
+    beq serial_get
+    ; fetch next byte from ring buffer
+    ; return in B
+    ldb ,X+
+    ; text for wrap
+    cmpx <rx_ring_buffer_end
+    bne nrout
+    ldx <rx_ring_buffer
+nrout
+    stx <ring_read_ptr
+    rts
+  }
+}
+
+// get amount of used bytes in the ring buffer
+asm u16_t serial_rx_ring_buffer_used(void)
+{
+  asm
+  {
+    ldd <ring_write_ptr
+    subd <ring_read_ptr
+    bcc rused_out
+	; read pointer ahead of write pointer
+    ldd #RX_RING_BUFZ
+    subd <ring_read_ptr
+    addd <ring_write_ptr
+rused_out
+    rts
+  }
+}
+
+#endif
 
 void slipdev_init(void)
 {
@@ -320,26 +313,18 @@ void slipdev_init(void)
   }
   install_6551_int_handler() ;
 #else
-  set_dtr(0) ;
+  set_dtr() ;
 #endif
 }
 
-void set_dtr(u8_t force)
+void set_dtr(void)
 {
-  if ( dtr_c )
-    dtr_c-- ;
-  if ( !dtr_c || force )
-  {
-    *sy6551_cmd = (*sy6551_cmd) | CMD_DTR ;
-    dtr_c = 0 ;
-  }
+  *sy6551_cmd = (*sy6551_cmd) | CMD_DTR ;
 }
 
 void clear_dtr(void)
 {
 #ifdef HW_FLOW_CONTROL
-  if ( !dtr_c )
-    *sy6551_cmd = (*sy6551_cmd) & (~CMD_DTR) ;
+  *sy6551_cmd = (*sy6551_cmd) & (~CMD_DTR) ;
 #endif
-  dtr_c++ ;
 }
