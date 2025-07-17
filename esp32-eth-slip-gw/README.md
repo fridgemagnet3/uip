@@ -22,4 +22,23 @@ Finally, time to connect it to the Dragon:
 
 ![PXL_20250608_110305615](https://github.com/user-attachments/assets/52eee7e1-8b7a-44ce-a136-13f9c20652be)
 
-As it stands then, it's basically working. There's still a few issues to sort out, one of which being some odd behaviour with the voltage levels around the MAX3232 chip which is causing spurious characters to be received by the Dragon. As a result, I've not yet had it working with hardware flow control wired up. 
+As it stands then, it's basically working. 
+
+## Drivewire gateway
+
+An optional component implemented in the software is the ability to use the last UART on the ESP, in tandem with the WiFi interface as a Drivewire 'gateway'. If enabled, this enables the ESP to connect to a Drivewire server using it's TCP/IP emulator configuration. The UART is then connected to the Dragon via suitable level shifter logic. Commands are then relayed to/from the Dragon & Drivewire server by the ESP. 
+
+One useful feature is that the ESP allows the UART to be configure with the RX pin inverted, this then negates the need to include an additional inverter chip on the Dragon side. 
+
+See the information in [config.h](config.h) for details on how to set this up.
+
+## Powering the board
+
+In the test configuration, the board is powered via the USB-C connector (which also provides the serial debug). In it's finished configuration, I'd like to dispense with that and have it (ideally) powered by the Dragon itself. Originally I was planning on using the 12V signal on the serial port with a DC-DC converter however looking at the schematics, this has a 10k pull up on it so isn't designed to power anything significant. That then leaves a few options:
+
+- USB-C power supply
+- Power over Ethernet. There's an [optional POE board](https://www.waveshare.com/wiki/ESP32-S3-ETH#ETH_Web_CAM) that can be fitted to the Waveshare device which would faciliate that. However in the absence of a dedicated POE port on a router, that would still require a dedicated POE injector supply
+- Power from the Dragon's +5V rail, either from the printer or cartridge port. This however then requires an additional custom ribbon cable (or similar) which makes things all a bit more messy
+
+None of these really satisfy what I was after as a standalone solution. However since I'm planning on using the Drivewire gateway functionality, that in turn requires connectivity to the printer port, that'll be the approach I'm planning to go with.
+
