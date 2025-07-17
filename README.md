@@ -138,20 +138,20 @@ The first is when the serial driver writes to the ring buffer faster than the ap
 
 There's a few ways you can try and deal with this:
 
-- Reduce the processing performed on the incoming packet data
-- Look at the [packet filter](#packet-filter) configuration
-- Increase the ring buffer size. On a non DOS Dragon, it should be safe to near enough double the size to 3Kbytes, possibly more depending on what applications have been enabled
-- Use hardware flow control
+- Reduce the processing performed on the incoming packet data.
+- Look at the [packet filter](#packet-filter) configuration, see if more packets are coming through that aren't used by the Dragon.
+- Increase the ring buffer size. On a non DOS Dragon, it should be safe to near enough double the size to 3Kbytes, possibly more depending on what applications have been enabled.
+- Use hardware flow control to tell the sender to stop transmitting data.
 
 This last point is worthy of a bit more detail in that I had planned and indeed did some experiments around using this approach ie. de-assert DTR when the ring buffer reached a certain size. The problem with this is that the 6551 immediately stops clocking in data which means that any byte that is currently being transmitted (and possibly a few more depending on the implementation of the sender) will be dropped. This behaviour can be seen on the following trace:
 
 <img width="788" height="319" alt="dtr-drop" src="https://github.com/user-attachments/assets/552216b5-9eda-4c23-9b3a-09b4543e8cbe" />
 
-Here, we can see interrupts being raised for the first two bytes coming in however none are generated after DTR is de-asserted - those last two are therefore lost. Since there is no way to predict when a packet will start being transmitted, there is never an occassion where it is safe to de-assert DTR and not run the risk of losing data. That said, there may well be instances where the incoming packets are predictable and/or minor data loss is acceptabe.
+Here, we can see interrupts being raised for the first two bytes coming in however none are generated after DTR is de-asserted - those last two are therefore lost. Since there is no way to predict when a packet will start being transmitted, within the core packet transmit/receive code there is never an occassion where it is safe to de-assert DTR and not run the risk of losing data. That said, there may well be application specific instances where the incoming packets **are** predictable and/or minor data loss is acceptabe & therefore whilst the core code itself never uses this mechanism, an interface is provided in the [serial.h](dragon/serial.h) header file.
 
 The second scenario is when the serial driver IRQ service routine fails to read data from the 6551 fast enough. There is an overrun bit in the status register which can be used to test for this condition however in order to reduce the interrupt handler latency (more on that in a bit), this isn't explicitly checked (although there is some commented out code in the handler which can be enabled which will cause it to increment the overrun counter). As it stands then, this condition manifests itself as an error from the uIP core - checksum failure, unexpected packet size however no serial overruns are reported.
 
-At 19200 baud, bytes are coming in at a rate of one every 0.5ms, that means the Dragon is having to work pretty hard to keep up. It's worse that though because the time between 1 byte fully arriving and the next one starting to be clocked in by the 6551 is around 110us - meaning the interrupt handler has that amount of time to fetch the data before it gets overwritten. 
+At 19200 baud, bytes are coming in at a rate of one every 0.5ms, that means the Dragon is having to work pretty hard to keep up. It's worse that though because the time between 1 byte fully arriving and the next one starting to be clocked in by the 6551 is around 110us - meaning the interrupt handler has that amount of time to fetch the data before it gets overwritten. Also as you can see, the interrupt is asserted some time after the serial stop bit has arrived so it's even less than that!
 
 <img width="658" height="394" alt="inter-char-delay" src="https://github.com/user-attachments/assets/0dd0ad5f-d7f7-4550-b290-b76bb3bc7c71" />
 
@@ -161,21 +161,21 @@ The following trace shows a typical 6809 IRQ response time with the serial drive
 
 <img width="494" height="380" alt="irq-service" src="https://github.com/user-attachments/assets/ecf3da09-8351-435e-9cd6-e7f505e20e3d" />
 
-Despite that though, I was still seeing 6551 serial overruns, not loads but normally every few packets. This is I suspect down to the current instruction that is being executed when the IRQ is raised - that has to be completed before it can be serviced. With some instructions taking 7+ odd clock cycles, it's entirely possible that the IRQ is being actioned slightly too late.
+Despite that though, you can still get 6551 serial overruns, typically every few packets (particularly if they are large). This is I suspect down to the current instruction that is being executed when the IRQ is raised - that has to be completed before it can be serviced. With some instructions taking 7+ odd clock cycles, it's entirely possible that the IRQ is being actioned slightly too late.
 
 To address this, the interrupt handler uses a variation of the approach used by the WD2797 disk controller logic. For those unfamiliar, the 6809 simply can't keep up with reading data from the controller if each byte were transferred via an IRQ. Instead, it masks all interrupts, then goes into a tight loop using the SYNC instruction which is woken up by the 2797 raising an FIRQ, at which point the next byte is read from the controller and it goes around the loop again. At the end of the sector, the controller raises an NMI which breaks out the loop.
 
-Here I do something similar in that when the first serial interrupt is raised, after reading out the data, it stays in the handler waiting on a SYNC instruction on the premise another byte will be along shortly. This continues until another non serial interrupt is detected (on a Dragon, that would normally be the 20ms timer) at which point it returns. 
+Here I do something similar in that when the first serial interrupt is raised, after reading out the data, it stays in the handler waiting on a SYNC instruction on the premise another byte will be along shortly. This continues until another non serial interrupt is detected (on a Dragon, that would normally be the 20ms timer) at which point it returns from the handler.
 
 Here's what it looks like in practice:
 
 <img width="989" height="327" alt="irq-sync" src="https://github.com/user-attachments/assets/fac8f2c7-8838-470d-ac51-576ac0ca2264" />
 
-You can see the much shorter response times when it's servicing the 6551 from within the existing handler. CB1 is the 20ms interrupt from the 6821, when that fires, that's the interrupt which finally returns from the interrupt, back to the application. The next serial interrupt then takes that bit longer again as it's going through the full interrupt raise processing again, subsequently they are again much shorter. Significantly so, around 14us:
+You can see the much shorter response times when it's servicing the 6551 from within the existing handler. CB1 is the 20ms interrupt from the 6821, when that fires, that's the interrupt which finally returns from the handler, back to the application. The next serial interrupt then takes that bit longer again as it's going through the full interrupt raise processing again, subsequently they are again much shorter. Significantly so, around 14us:
 
 <img width="579" height="480" alt="irq-sync-service" src="https://github.com/user-attachments/assets/c2605a5d-1e82-430d-b61c-daa9ae090010" />
 
-What this means is that the application code is pretty much locked out for significant periods whilst a packet is being received however given how busy the processor is servicing the incoming data, doesn't affect things that much. The net effect is that it does significantly reduce the possibility of a hardware overrun - it doesn't eliminate them because every 20ms it'll drop out of the handler which means there is still scope that the next interrupt will take too long to action. 
+What this means is that the application code is pretty much locked out for significant periods whilst a packet is being received however the net effect is that it does significantly reduce the possibility of a hardware overrun. It doesn't eliminate them because every 20ms it'll drop out of the handler which means there is still scope that the next interrupt will take too long to action but it takes it from being a fairly frequent occurrance to being a much rarer event.
 
 Of course the other approach to all of this is to reduce the baud rate but where's the fun in that.
 
