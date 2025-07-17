@@ -86,13 +86,6 @@ asm serial_put(void)
 void
 slipdev_send(void)
 {
-#ifdef SERIAL_DRIVER
-  // deassert DTR for large sends
-  // to reduce overruns
-  if ( uip_len > (UIP_CONF_BUFFER_SIZE/3) )
-    clear_dtr() ;
-#endif
-
   asm
   {
     ; serial_put(slip_end);
@@ -146,11 +139,6 @@ tx_end:
     bsr serial_put
     puls y
   }
-
-#ifdef SERIAL_DRIVER
-  if ( uip_len > (UIP_CONF_BUFFER_SIZE/3) )
-    set_dtr() ;
-#endif
 }
 
 /*-----------------------------------------------------------------------------------*/

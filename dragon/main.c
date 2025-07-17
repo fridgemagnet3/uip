@@ -98,7 +98,12 @@ int main(void)
     {
 #ifdef APP_RESOLV
       printf("Issuing DNS lookup...\n") ;
+#ifdef APP_DHCPC
+      // assume if DHCP assigned, can get on t'internet
+      resolv_query("www.oasw.co.uk");
+#else
       resolv_query("monolith.onasticksoftware.net");
+#endif
 #else
       printf("Issuing web request...\n") ;
 #ifdef WEB_GRAPHICS
