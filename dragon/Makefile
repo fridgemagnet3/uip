@@ -9,7 +9,7 @@ CC     = cmoc
 AR     = lwar
 # define the apps included in the binary
 APPS   = telnetd weather-udp solar-udp callchain
-#APPS    = webclient resolv callchain
+#APPS    = webclient resolv
 CFLAGS+= -I../uip -I../lib -I. -I../time --dragon -c 
 #CFLAGS+= -DSERIAL_DRIVER 
 
@@ -42,7 +42,7 @@ CFLAGS+=-DAPP_CALLCHAIN
 endif
 
 ARFLAGS = -c
-LDFLAGS+= -i --dragon --org=0x1500
+LDFLAGS+= -i --dragon --org=0x2000 --limit=7c00
 LIBS+= -L./ -luip -lapps
 -include ../uip/Makefile.include
 
