@@ -179,11 +179,22 @@ The following trace shows a typical 6809 IRQ response time with the serial drive
 
 <img width="494" height="380" alt="irq-service" src="https://github.com/user-attachments/assets/ecf3da09-8351-435e-9cd6-e7f505e20e3d" />
 
-Despite that though, you can still get 6551 serial overruns, typically every few packets (particularly if they are large). This is I suspect down to the current instruction that is being executed when the IRQ is raised - that has to be completed before it can be serviced. With some instructions taking 7+ odd clock cycles, it's entirely possible that the IRQ is being actioned slightly too late.
+Rough estimate shows this to be about right:
 
-To address this, the interrupt handler uses a variation of the approach used by the WD2797 disk controller logic. For those unfamiliar, the 6809 simply can't keep up with reading data from the controller if each byte were transferred via an IRQ. Instead, it masks all interrupts, then goes into a tight loop using the SYNC instruction which is woken up by the 2797 raising an FIRQ, at which point the next byte is read from the controller and it goes around the loop again. At the end of the sector, the controller raises an NMI which breaks out the loop.
+18 cycles = Interrupt stacking and vector sequence (datasheet)\
+14 cycles = IRQ service routine (see timing diagram at the end of this section)\
+Assume ~5 cycle to complete current instruction\
+Total 37 cycles * MC6809 @ 0.9Mhz = ~1.1us per instruction = ~41us
 
-Here I do something similar in that when the first serial interrupt is raised, after reading out the data, it stays in the handler waiting on a SYNC instruction on the premise another byte will be along shortly. This continues until another non serial interrupt is detected (on a Dragon, that would normally be the 20ms timer) at which point it returns from the handler.
+Despite that though, you can still get 6551 serial overruns, typically every few packets (particularly if they are large). Even accounting for time consuming instructions (some of the branches can take ~9 cycles), that still should complete within plenty of time. I suspect where the problem lies is when a serial AND the 50Hz timer interrupt occur more or less at the same time:
+
+<img width="450" height="445" alt="serial-clock-irq" src="https://github.com/user-attachments/assets/dfbc63cc-fa79-4aa3-b502-dd52dc59cfd2" />
+
+Here the timer interrupt occurs very shortly before one from the 6551, the net effect is that this delays the servicing of the latter such that we're into overrun territory - the first bit is already in the process of being clocked in at the point we read out the previous byte.
+
+To (partially) address this, the interrupt handler uses a variation of the approach used by the WD2797 disk controller logic. For those unfamiliar, the 6809 simply can't keep up with reading data from the controller if each byte were transferred via an IRQ. Instead, it masks all interrupts, then goes into a tight loop using the SYNC instruction which is woken up by the 2797 raising an FIRQ, at which point the next byte is read from the controller and it goes around the loop again. At the end of the sector, the controller raises an NMI which breaks out the loop.
+
+Here I do something similar in that when the first serial interrupt is raised, after reading out the data, it stays in the handler waiting on a SYNC instruction on the premise another byte will be along shortly. This continues until another non serial interrupt is detected (ie. the 50Hz timer) at which point it returns from the handler.
 
 Here's what it looks like in practice:
 
@@ -193,7 +204,9 @@ You can see the much shorter response times when it's servicing the 6551 from wi
 
 <img width="579" height="480" alt="irq-sync-service" src="https://github.com/user-attachments/assets/c2605a5d-1e82-430d-b61c-daa9ae090010" />
 
-What this means is that the application code is pretty much locked out for significant periods whilst a packet is being received however the net effect is that it does significantly reduce the possibility of a hardware overrun. It doesn't eliminate them because every 20ms it'll drop out of the handler which means there is still scope that the next interrupt will take too long to action but it takes it from being a fairly frequent occurrance to being a much rarer event.
+The net effect is that this significantly reduces those delays where two interrupts occur around the same time. It doesn't _eliminate_ them (and therefore the odd overrun can still happen) because in the case where the timer interrupt comes in just before the serial one, that will always delay things. However it does improve the situation when the order is reversed.
+
+What this means is that the application code is pretty much locked out for significant periods whilst a packet is being received however given how busy the processor is servicing all those interrupts, it really doesn't make that much difference. 
 
 Of course the other approach to all of this is to reduce the baud rate but where's the fun in that.
 
