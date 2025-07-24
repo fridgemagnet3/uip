@@ -16,13 +16,19 @@ At present the stack builds and runs on:
 - Dragon 64 connected via serial to a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP)
 - Dragon 64 connected via serial (and suitable transceiver) to a [Waveshare ESP32-S3-ETH microcontroller](/esp32-eth-slip-gw) - work in progress
 
-The Dragon will respond to ping requests and the default configuration includes a simple telnet server application and a UDP based receiver of my own which listens on port 52005 and will display any textual data received. Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) but should work with any packets containing text. In the event it DOES contain solar JSON data, it will also decode & display it nicely:
+In all build configurations, the Dragon will respond to ping requests. 
+
+The default configuration includes a simple UDP server which listens on port 52005 and will display any textual received on the screen. You can use something like [netcat](https://nc110.sourceforge.io/) to demonstrate this:
+
+<img width="640" height="323" alt="hello-dragon" src="https://github.com/user-attachments/assets/5f4eabe1-3b9d-40c3-a1dd-694edae3052b" />
+
+Coincidently, this happens to be the same port I use for [broadcasting my solar (JSON) data](https://github.com/fridgemagnet3/modbus-solis5g) and in the (probably rare) event it DOES contain solar JSON data, it will also decode & display it nicely:
 
 ![solar-weather-metrics](https://github.com/user-attachments/assets/8e00a911-3eaf-4bd7-bc88-7a983dbc8233)
 
-I've also implemented another simple app to receive & decode data from my little [weather station](https://www.oasw.co.uk/weather/about.html).
+Also pictured is the output of another app which receives & decodes UDP data from my little [weather station](https://www.oasw.co.uk/weather/about.html).
 
-The telnet server also allows this data to be retrieved:
+The configuration also includes a telnet server which allows this data to be retrieved:
 
 `telnet 192.168.3.2`\
 `Trying 192.168.3.2...`\
@@ -51,7 +57,19 @@ The telnet server also allows this data to be retrieved:
 `RAINFALL    : 0 MM`\
 `uIP 1.0> `
 
-Both the webclient and DNS resolver applications should also work (although they're not currently enabled by default, should just be a case of adjusting the Makefile as needed). The webclient will work with or without the resover enabled (in case of the latter, you need to specify the web server by IP address) and will simply dump out the contents of the requested document. Both apps currently use IP addresses and names local to my network so will need changing to work. Just be aware that odds are if you try and connect to an external IP, it won't work unless you adjust your router/routing tables to connect to the subnet being used by the TAP interface.
+Which applications are included is controlled by settings in the [Makefile](dragon/Makefile), this includes a DHCP client:
+
+![PXL_20250628_084356960_crop](https://github.com/user-attachments/assets/f238efca-10fe-4435-bc4a-8e5f753ece88)
+
+And a DNS resolver and webclient applications. The webclient demo configuration can be used to (optionally) perform a DNS lookup, then download a bitmap:
+
+![PXL_20250723_180706459_crop](https://github.com/user-attachments/assets/bd8b3532-e7ea-4a8b-a1cc-5ebdae2ba70f)
+
+and display it on the Dragon:
+
+![PXL_20250705_140002674_crop](https://github.com/user-attachments/assets/4de47aad-5c21-4a78-a4ea-ee1b23967b1e)
+
+This of course only works if you've set things like IP routing/gateways etc. to allow the Dragon to reach the wider Internet - that only works if the configuration includes both DHCP and DNS components. In all other configurations you'll need to modify the various IP addresses that are hardcoded into the [main application](dragon/main.c). 
 
 Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the switch() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
 
