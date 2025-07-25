@@ -119,13 +119,13 @@ and get responses back from the Dragon.
 For this, you'll need to wire up a serial cable between the Dragon and Linux machine. As a minimum, you need to wire up RX,TX and GND. Note the following:
 
 - the Dragon will NOT receive anything unless CTS (input) is asserted
-- the Dragon will NOT transmit unless it has asserted DTR, the software automatically does this but also see below
+- the Dragon will NOT transmit unless it has asserted DTR, the software automatically does this when it starts
 
-As such, I also recommend you wire up the flow control pins, from the Dragon side DTR to CTS and CTS to RTS. 
+At present hardware flow control is NOT used by the software however there may be circumstances where it could be useful - see the section on [serial overruns](#serial-overruns-and-the-use-and-abuse-of-hardware-handshaking) below. 
 
-The [serial driver](dragon/serial.c) uses DTR to reduce (prevent?) receive overruns and de-asserts DTR when transmitting large (>512K bytes or half the RX ring buffer size) packets. This means if you choose NOT to wire up the control lines, you may see receive overruns and additionally you can't just locally connect DTR to CTS without modifying the software as you'll potentially deadlock things. 
+As such, you **either** need to wire up the flow control pins, from the Dragon side DTR to CTS and CTS to RTS **OR** tie CTS to +12V (or DTR).
 
-As of [4862108](https://github.com/fridgemagnet3/uip/commit/4862108f67842cfb450d10b7e0e31bf8a1737191), I've re-engineered the serial driver to allow for a configurable RX ring buffer size (previously it was fixed at 256 bytes) as I was starting to see overruns whilst some of the sample applications were running. Additionally, I've relocated the buffer to the first graphics page in memory (nominally $600 or $C00 if a DOS is present). The default value is 1Kbytes and this seems to have improved things significantly, to the extent where hardware flow control may not be required but some more testing is required....
+As of [4862108](https://github.com/fridgemagnet3/uip/commit/4862108f67842cfb450d10b7e0e31bf8a1737191), I've re-engineered the serial driver to allow for a configurable RX ring buffer size (previously it was fixed at 256 bytes) as I was starting to see overruns whilst some of the sample applications were running. Additionally, I've relocated the buffer to the first graphics page in memory (nominally $600 or $C00 if a DOS is present). The default value is 1600 bytes and this seems to have improved things significantly. There's more information on this and why/when you may see issues in the [serial overruns](#serial-overruns-and-the-use-and-abuse-of-hardware-handshaking) section below.
 
 Unsurprisingly, the build/setup process is pretty similiar when using the emulator. When building the stack, enable the serial driver:
 
@@ -146,7 +146,9 @@ At which point you should be able to successfully ping it and start playing with
 
 ![PXL_20250524_133458707](https://github.com/user-attachments/assets/6a375ef9-8c43-4782-9505-a0aff4759a8e)
 
-Note that the serial driver will also work with the emulator however there's no real benefit in operating it in that mode, you'll need to throttle the transmits from the tap-slip-gw app in order to avoid massive overruns which ultimately makes everything run much slower. See my comments at the top of the [serial.c](dragon/serial.c) file.
+That number (0) between the IP address and serial device specifies the inter-character delay (in microseconds) between each character that is transmitted. This can also help in the case of [serial overruns](#serial-overruns-and-the-use-and-abuse-of-hardware-handshaking), at the cost of transfer speed.
+
+Note that the serial driver will also work with the emulator however there's no real benefit in operating it in that mode (it's primarily useful for driver debugging purposes) and will ultimately run slower. If you do opt to use it in that mode, you'll need to specify an inter-character delay of at least 400/500us in order to avoid massive overruns (which roughly equates to a 19200 baud rate).
 
 ### Serial overruns and the use (and abuse) of hardware handshaking
 
@@ -159,6 +161,7 @@ There's a few ways you can try and deal with this:
 - Reduce the processing performed on the incoming packet data.
 - Look at the [packet filter](#packet-filter) configuration, see if more packets are coming through that aren't used by the Dragon.
 - Increase the ring buffer size. On a non DOS Dragon, it should be safe to near enough double the size to 3Kbytes, possibly more depending on what applications have been enabled.
+- specify a non-zero inter-character delay
 - Use hardware flow control to tell the sender to stop transmitting data.
 
 This last point is worthy of a bit more detail in that I had planned and indeed did some experiments around using this approach ie. de-assert DTR when the ring buffer reached a certain size. The problem with this is that the 6551 immediately stops clocking in data which means that any byte that is currently being transmitted (and possibly a few more depending on the implementation of the sender) will be dropped. This behaviour can be seen on the following trace:
