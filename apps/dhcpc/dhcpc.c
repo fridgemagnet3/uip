@@ -36,7 +36,10 @@
 #include <string.h>
 #else
 #include <cmoc.h>
-#define DHCP_STATUS
+// uncomment to enable reporting of DCHP assigned IP info
+// On the Dragon, this eats up nearly 1Kbyte extra hence
+// why it's not enabled by default
+//#define DHCP_STATUS
 #endif
 
 #include "uip.h"
