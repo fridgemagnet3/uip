@@ -65,7 +65,7 @@ And a DNS resolver and webclient applications. The webclient demo configuration 
 
 ![PXL_20250723_180706459_crop](https://github.com/user-attachments/assets/bd8b3532-e7ea-4a8b-a1cc-5ebdae2ba70f)
 
-and display it on the Dragon:
+and display it on the Dragon's monitor:
 
 ![PXL_20250705_140002674_crop](https://github.com/user-attachments/assets/4de47aad-5c21-4a78-a4ea-ee1b23967b1e)
 
@@ -193,13 +193,13 @@ Despite that though, you can still get 6551 serial overruns, typically every few
 
 <img width="450" height="445" alt="serial-clock-irq" src="https://github.com/user-attachments/assets/dfbc63cc-fa79-4aa3-b502-dd52dc59cfd2" />
 
-Here CB1 is the 50Hz control line from the 6821. Here it's occurring very shortly before one from the 6551, the net effect is that this delays the servicing of the latter such that we're into overrun territory - the first bit is already in the process of being clocked in at the point we read out the previous byte.
+CB1 is the 50Hz frame sync from the 6821. Here it's occurring very shortly before one from the 6551, the net effect is that this delays the servicing of the latter such that we're into overrun territory - the first bit is already in the process of being clocked in at the point we read out the previous byte.
 
 To (partially) address this, the interrupt handler uses a variation of the approach used by the WD2797 disk controller logic. For those unfamiliar, the 6809 simply can't keep up with reading data from the controller if each byte were transferred via an IRQ. Instead, it masks all interrupts, then goes into a tight loop using the SYNC instruction which is woken up by the 2797 raising an FIRQ, at which point the next byte is read from the controller and it goes around the loop again. At the end of the sector, the controller raises an NMI which breaks out the loop.
 
 Here I do something similar in that when the first serial interrupt is raised, after reading out the data, it stays in the handler waiting on a SYNC instruction on the premise another byte will be along shortly. This continues until another non serial interrupt is detected (ie. the 50Hz timer) at which point it returns from the handler.
 
-Here's what it looks like in practice:
+This is what it looks like in practice:
 
 <img width="989" height="327" alt="irq-sync" src="https://github.com/user-attachments/assets/fac8f2c7-8838-470d-ac51-576ac0ca2264" />
 
