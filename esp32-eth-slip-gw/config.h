@@ -26,6 +26,9 @@
 #define RTS1 17
 #define CTS1 18
 
+// GPIO used for status LED
+#define STATUS_LED 48
+
 // define to filter UDP packets
 #define FILTER_UDP_BROADCASTS 
 

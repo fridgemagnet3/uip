@@ -329,6 +329,12 @@ void setup()
   Serial.begin(115200);
   Serial.println("Starting Ethernet SLIP gateway...");
 
+#ifdef STATUS_LED
+  // turn on status led, indicate we're alive
+  pinMode(STATUS_LED, OUTPUT);
+  digitalWrite(STATUS_LED, HIGH);
+#endif
+
   // initialise serial port used for SLIP
   // increase RX buffer size 
   Serial1.setRxBufferSize(MAX_SIZE) ;
@@ -438,6 +444,19 @@ void setup()
         xTaskCreate(DWireServiceTask,"DriveWireServiceTask",4096,NULL,2,&DWireTaskHandle) ;
         if ( DWireTaskHandle == NULL )
           Serial.println("Failed to create DriveWire service task");
+        else
+        {
+#ifdef STATUS_LED
+          // pulse status led on successful dwire connection
+          for(uint32_t i=0 ; i < 3 ; i++ )
+          {
+            digitalWrite(STATUS_LED, LOW);
+            delay(400);
+            digitalWrite(STATUS_LED, HIGH);
+            delay(400);
+          }
+#endif
+        }
       }
   }
   Serial.println("D = Drivewire rx from server/tx to client");
@@ -464,6 +483,23 @@ void setup()
 
 void loop() 
 {
+#ifdef STATUS_LED
+  static unsigned long LastStatusUpdate = 0 ;
+  const unsigned long StatusUpdateInterval = 1000 ;
+  unsigned long TimeNow ;
+
+  TimeNow = millis() ;
+  // blink the status LED every second to provide indication of alive
+  if ( (TimeNow - LastStatusUpdate) > StatusUpdateInterval )
+  {
+    LastStatusUpdate = TimeNow ;
+    if ( digitalRead(STATUS_LED) == LOW )
+      digitalWrite(STATUS_LED, HIGH);
+    else
+      digitalWrite(STATUS_LED, LOW);
+  }
+#endif
+
   // poll for serial data on the SLIP interface
   if ( Serial1.available())
     SlipSendEthFrame() ;
