@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define atoff(a) strtof(a,NULL)
-#define atoul(a) strtoul(a,NULL,10)
 #define atoui(a) (u16_t)strtoul(a,NULL,10)
 #else
 #include <cmoc.h>
@@ -44,7 +42,6 @@ void weather_udp_appcall(void)
     {
       char *weather_data = (char*)uip_appdata ;
       char *delim ;
-      u8_t toks = 0 ;
       
       weather_data[uip_datalen()] = 0;
 
@@ -59,6 +56,14 @@ void weather_udp_appcall(void)
       // weather data comes in as a single line of text
       // comprising timestamp, temperature, windspeed, rainfall
       // each delimited by a space
+#if !defined(_CMOC_VERSION_) || _CMOC_VERSION_>1090   
+      weather.timestamp = strtoul(weather_data,&delim,10) ;
+      weather.temp = strtof(delim,&delim) ;
+      weather.wind = strtof(delim,&delim) ;
+      weather.rain = atoui(delim) ;
+#else
+      u8_t toks = 0 ;
+
       delim = strtok(weather_data," ") ;
       while ( delim )
       {
@@ -81,6 +86,7 @@ void weather_udp_appcall(void)
         delim = strtok(NULL," ") ;
       }
       if ( toks==4 )
+#endif
       {
 #ifdef DRAGON
        // output the data half way down the screen
