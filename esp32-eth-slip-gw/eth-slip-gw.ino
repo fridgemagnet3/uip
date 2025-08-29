@@ -76,10 +76,12 @@ static esp_err_t EthRxFrameCBack(esp_eth_handle_t Handle, uint8_t *Buffer, uint3
   uint32_t i ;
   uint8_t Byte ;
 
+#ifdef FLOW_CONTROL1
   // discard everything till the MAC address of the SLIP client has been set
   // ie. until we've received at least one packet
   if ( !MacSet )
     return ESP_OK ;
+#endif
 
   // apply packet filtering logic
   if ( filter_packet(Buffer,Length))
