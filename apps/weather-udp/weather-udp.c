@@ -14,7 +14,7 @@ typedef struct {
   time_t  timestamp ;  // Unix timestamp
   float   temp ; // temperature
   float   wind ; // wind speed
-  u16_t   rain ; // rainfall
+  float   rain ; // rainfall
 } weather_t ;
 
 static weather_t weather ;
@@ -60,7 +60,7 @@ void weather_udp_appcall(void)
       weather.timestamp = strtoul(weather_data,&delim,10) ;
       weather.temp = strtof(delim,&delim) ;
       weather.wind = strtof(delim,&delim) ;
-      weather.rain = atoui(delim) ;
+      weather.rain = strtof(delim,NULL) ;
 #else
       u8_t toks = 0 ;
 
@@ -79,7 +79,7 @@ void weather_udp_appcall(void)
             weather.wind = atoff(delim); ;
             break ;
           case 3:
-            weather.rain = atoui(delim) ;
+            weather.rain = atoff(delim) ;
             break ;
         }
         toks++ ;
@@ -125,6 +125,6 @@ void output_weather_data(output_str_t output_str_cback)
   // limitations of the CMOC compiler/BASIC ROM which handles the floating point numbers
   sprintf(buf,"WIND SPEED  : %f MPH\n", weather.wind);
   output_str_cback(buf) ;
-  sprintf(buf,"RAINFALL    : %u MM\n", weather.rain);
+  sprintf(buf,"RAINFALL    : %f MM\n", weather.rain);
   output_str_cback(buf) ;
 }
