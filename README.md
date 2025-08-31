@@ -1,12 +1,12 @@
 # A Dragon IP stack using uIP
 
-This is a project to create an IPv4 stack for the old [Dragon 8-bit computer](https://en.wikipedia.org/wiki/Dragon_32/64), if my enthusasm continues, I plan to fiddle about with it to varying degrees over the next few months.
+This is a project to create an IPv4 stack for the old [Dragon 8-bit computer](https://en.wikipedia.org/wiki/Dragon_32/64)
 
 I should start by saying that if you're looking to shuffle data from the Internet (eg. download a file or web page) there are far easier ways of accomplishing this. For example you could use the [Drivewire protocol](https://archive.worldofdragon.org/index.php?title=DriveWire), where you offload the actual IP protocol to a more modern/capable machine. There's no real obvious point to doing this other than it seemed an interesting (mad?) thing to do. 
 
 Originally I envisaged writing a very basic IP stack in assembler, really to just support the basic ARP and UDP protocols but then uncovered an archive of the UIP I'd downloaded about 10 years ago which seemed a better starting point (not least because it supports TCP as well).
 
-At present the plan is for this to only run on a Dragon 64, not specifically because it has more memory than the 32 (although one of the demos does make use of the 64's additional memory for displaying a bitmap), rather that it has a RS232 port (which the 32 lacks). It's unlikely to be able to run on a D32, using a bitbanger type port (in a similar vein to Drivewire) due to the asynchronous nature of network traffic.
+At present this only runs on a Dragon 64, not specifically because it has more memory than the 32 (although one of the demos does make use of the 64's additional memory for displaying a bitmap), rather that it has a RS232 port (which the 32 lacks). It's unlikely to be able to run on a D32, using a bitbanger type port (in a similar vein to Drivewire) due to the asynchronous nature of network traffic.
 
 ## Current status
 
@@ -14,7 +14,7 @@ At present the stack builds and runs on:
 
 - [modified version of the XRoar emulator](https://github.com/fridgemagnet3/xroar) using a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP)
 - Dragon 64 connected via serial to a [Linux TAP device](https://en.wikipedia.org/wiki/TUN/TAP)
-- Dragon 64 connected via serial (and suitable transceiver) to a [Waveshare ESP32-S3-ETH microcontroller](/esp32-eth-slip-gw) - work in progress
+- Dragon 64 connected via serial (and suitable transceiver) to a [Waveshare ESP32-S3-ETH microcontroller](/esp32-eth-slip-gw)
 
 In all build configurations, the Dragon will respond to ping requests. 
 
@@ -26,7 +26,7 @@ Coincidently, this happens to be the same port I use for [broadcasting my solar 
 
 ![solar-weather-metrics](https://github.com/user-attachments/assets/8e00a911-3eaf-4bd7-bc88-7a983dbc8233)
 
-Also pictured is the output of another app which receives & decodes UDP data from my little [weather station](https://www.oasw.co.uk/weather/about.html).
+Also pictured is the output of another app which receives & decodes UDP data from my [weather station](https://www.oasw.co.uk/weather/about.html).
 
 The configuration also includes a telnet server which allows this data to be retrieved:
 
@@ -69,7 +69,7 @@ and display it on the Dragon's monitor:
 
 ![PXL_20250705_140002674_crop](https://github.com/user-attachments/assets/4de47aad-5c21-4a78-a4ea-ee1b23967b1e)
 
-This of course only works if you've set things like IP routing/gateways etc. to allow the Dragon to reach the wider Internet - that only works if the configuration includes both DHCP and DNS components. In all other configurations you'll need to modify the various IP addresses that are hardcoded into the [main application](dragon/main.c). 
+This only works if you've set things like IP routing/gateways etc. to allow the Dragon to reach the wider Internet - ie. the configuration includes both DHCP and DNS components. In all other configurations you'll need to modify the various IP addresses that are hardcoded into the [main application](dragon/main.c). 
 
 Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the switch() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
 
