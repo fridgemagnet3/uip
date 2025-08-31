@@ -2,6 +2,16 @@ This is a project to create a standalone network adaptor based around an ESP32 m
 
 Initially I had planned to use the [ESP32 Ethernet kit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-ethernet-kit/user_guide.html) for this, then I cam across the [Waveshare ESP32-S3-ETH board](https://www.waveshare.com/wiki/ESP32-S3-ETH#ETH_Web_CAM) which is not only [much cheaper](https://thepihut.com/products/esp32-s3-ethernet-development-board-rj45) but also smaller as well. 
 
+The software comprises an [Arduino IDE](https://www.arduino.cc/en/software/) sketch, the board settings are described on the Waveshare page however just in case that goes AWOL, I'll sumarise them here:
+
+Tools, Board: _ESP32S3 Dev Module_  
+Tools, USB CDC On Boot: _Enabled_  
+Tools, Flash Size: _16MB (128Mb)_  
+Tools, Partition Scheme: _Huge APP (3MB No OTA/1MB SPIFFS)_  
+Tools, PSRAM: _OPI PSRAM_  
+
+You'll need to review and adjust [the configuration settings](config.h) to suite your hardware.
+
 Here's the initial test setup:
 
 ![PXL_20250601_102112606 MACRO_FOCUS](https://github.com/user-attachments/assets/5fcf4067-0946-4368-867c-8a1e0430ecfb)
@@ -22,23 +32,36 @@ Finally, time to connect it to the Dragon:
 
 ![PXL_20250608_110305615](https://github.com/user-attachments/assets/52eee7e1-8b7a-44ce-a136-13f9c20652be)
 
-As it stands then, it's basically working. 
+[Beware the use of cheap/conterfeit MAX3232 chips](https://electronics.stackexchange.com/questions/750089/using-a-max3232-with-old-8-bit-computer), as I discovered the hard way, they don't behave nicely when conncted to the Dragon (and possibly older computers in general).
+
+## Flow control
+
+Another gotcha with flow control (enabled) to bear in mind is that (as noted on the main page) the Dragon powers up with DTR de-asserted. It only gets cleared once the UIP software starts running. This had the potential for the ESP to stack up packets, then send them in a burst to the Dragon which can easily overwhelm it. To alleviate this, the ESP software discards packets until it has received at least one from the Dragon. The UIP software on the Dragon will satisfy this condition by always sending at least one packet during initialisation (either DHCP or ARP announcement). That's all fine EXCEPT if you then reset/power cycle the Dragon, the ESP won't be aware of this and will then will start backing up packets. TBH it's really become apparent why nobody uses this any more and is probably just best avoided.
 
 ## Drivewire gateway
 
-An optional component implemented in the software is the ability to use the last UART on the ESP, in tandem with the WiFi interface as a Drivewire 'gateway'. If enabled, this enables the ESP to connect to a Drivewire server using it's TCP/IP emulator configuration. The UART is then connected to the Dragon via suitable level shifter logic. Commands are then relayed to/from the Dragon & Drivewire server by the ESP. 
+An optional component implemented in the software is the ability to use the last UART on the ESP, in tandem with the WiFi interface as a Drivewire 'gateway'. If enabled, this enables the ESP to connect to a Drivewire server using it's TCP/IP emulator configuration. The UART is then connected to the Dragon via suitable level shifter logic. Commands are then relayed to/from the Dragon & Drivewire server by the ESP. Note that the Drivewire client has timeouts build into the protocol, if your WiFi is quite slow or subject to stalls, you may encounter I/O errors.
 
-One useful feature is that the ESP allows the UART to be configure with the RX pin inverted, this then negates the need to include an additional inverter chip on the Dragon side. 
+A useful feature is that the ESP allows the UART to be configure with the RX pin inverted, this then negates the need to include an additional inverter chip on the Dragon side. 
 
 See the information in [config.h](config.h) for details on how to set this up.
 
-## Powering the board
+The version of Drivewire server I have (4.3.3) doesn't handle unexpected TCP disconnects particularly well (ie. if you power cycle the ESP). When re-powered, the ESP appears to connect again successfully and can send to the server however it never receives anything back. As such you need to manually restart the connection on the server __before__ power cycling the ESP. It should then successfully connect again.
 
-In the test configuration, the board is powered via the USB-C connector (which also provides the serial debug). In it's finished configuration, I'd like to dispense with that and have it (ideally) powered by the Dragon itself. Originally I was planning on using the 12V signal on the serial port with a DC-DC converter however looking at the schematics, this has a 10k pull up on it so isn't designed to power anything significant. That then leaves a few options:
+## Schematic and finished board
 
-- USB-C power supply
-- Power over Ethernet. There's an [optional POE board](https://www.waveshare.com/wiki/ESP32-S3-ETH#ETH_Web_CAM) that can be fitted to the Waveshare device which would faciliate that. However in the absence of a dedicated POE port on a router, that would still require a dedicated POE injector supply
-- Power from the Dragon's +5V rail, either from the printer or cartridge port. This however then requires an additional custom ribbon cable (or similar) which makes things all a bit more messy
+<img width="1029" height="601" alt="schematic" src="https://github.com/user-attachments/assets/86be66fc-10a8-4036-9770-782b92fbd5a0" />
 
-None of these really satisfy what I was after as a standalone solution. However since I'm planning on using the Drivewire gateway functionality, that in turn requires connectivity to the printer port, that'll be the approach I'm planning to go with.
+Those collection of transisters/resistors which form part of the Drivewire gateway circuitry perform the level shifting between 3v3 & 5V. Equally you could use one of those cheaply available dedicated level shifter modules, I was just making use of some spare bits I had lying around.
 
+The optional status LED is designed to give an indication of board activity in the absence of the serial/debug port. When the software first starts up, it turns the LED on. It will remain lit whilst it establishes the WiFi connection (if enabled) and upon successful connection to a Drivewire server (again if enabled), will blink rapidly 4 times. Once the main processing loop starts running, it should turn off and on every second.
+
+![PXL_20250829_114903284_crop](https://github.com/user-attachments/assets/dc34575a-dfea-41ef-874e-c262988f7acb)
+
+The ribbon cable on the left is the Drivewire interface to the Dragon's printer port. Here I'm also powering the board using the 5V pins that are also brought out on this interface. Over on the top left is the RS232 interface, next to the MAX3232 chip. 
+
+The USB socket (not shown on the schematic) is a convenient extra 5V power supply, it enables me to power the composite video/HDMI converter box I use to connect the Dragon to a PC monitor. As a result, I don't need any extra cables, extensions or USB hubs for my Dragon set up.
+
+If you're powering the board this way then you can't use the USB-C interface at the same time and hence access the debug serial port. As such, that 3 pin header next to the USB socket brings out the debug port where they can be connected to something like a Raspberry Pi (or other UART that uses 3v3 logic levels). Note that in order to receive debug on this interface, you need to change the _USB CDC On Boot_ option to _Disabled_ prior to flashing the software. Debug will also not then be sent to the USB-C interface.
+
+Unfortunately, if you're not using the Drivewire gateway (and hence wiring up the Dragon's printer port) there isn't another convenient power source available on the Dragon. Originally I'd hoped to use the +12V pin on the serial port via suitable DC-DC converter however having examined the schematics, that has a 10K pull up resister fitted so isn't intended to power anything. That means either using a USB-C power supply or alternatively the [POE board](https://www.waveshare.com/wiki/ESP32-S3-ETH#ETH_Web_CAM).
