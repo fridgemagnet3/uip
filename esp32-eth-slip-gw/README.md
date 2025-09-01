@@ -42,7 +42,7 @@ Another gotcha with flow control (enabled) to bear in mind is that (as noted on 
 
 An optional component implemented in the software is the ability to use the last UART on the ESP, in tandem with the WiFi interface as a Drivewire 'gateway'. If enabled, this enables the ESP to connect to a Drivewire server using it's TCP/IP emulator configuration. The UART is then connected to the Dragon via suitable level shifter logic. Commands are then relayed to/from the Dragon & Drivewire server by the ESP. Note that the Drivewire client has timeouts build into the protocol, if your WiFi is quite slow or subject to stalls, you may encounter I/O errors.
 
-A useful feature is that the ESP allows the UART to be configure with the RX pin inverted, this then negates the need to include an additional inverter chip on the Dragon side. 
+A useful feature is that the ESP allows the UART to be configured with the RX pin inverted, this then negates the need to include an additional inverter chip on the Dragon side. 
 
 See the information in [config.h](config.h) for details on how to set this up.
 
@@ -58,9 +58,9 @@ The optional status LED is designed to give an indication of board activity in t
 
 ![PXL_20250829_114903284_crop](https://github.com/user-attachments/assets/dc34575a-dfea-41ef-874e-c262988f7acb)
 
-The ribbon cable on the left is the Drivewire interface to the Dragon's printer port. Here I'm also powering the board using the 5V pins that are also brought out on this interface. Over on the top left is the RS232 interface, next to the MAX3232 chip. 
+The ribbon cable on the left is the Drivewire interface to the Dragon's printer port. Here I'm also powering the board using the 5V pins that are also brought out on this interface. Over on the top right is the RS232 interface, next to the MAX3232 chip. 
 
-The USB socket (not shown on the schematic) is a convenient extra 5V power supply, it enables me to power the composite video/HDMI converter box I use to connect the Dragon to a PC monitor. As a result, I don't need any extra cables, extensions or USB hubs for my Dragon set up.
+The USB socket (not shown on the schematic) is a convenient extra 5V output, it enables me to power the composite video/HDMI converter box I use to connect the Dragon to a PC monitor. As a result, I now don't need any extra cables, extensions or USB hubs for my Dragon set up.
 
 If you're powering the board this way then you can't use the USB-C interface at the same time and hence access the debug serial port. As such, that 3 pin header next to the USB socket brings out the debug port where they can be connected to something like a Raspberry Pi (or other UART that uses 3v3 logic levels). Note that in order to receive debug on this interface, you need to change the _USB CDC On Boot_ option to _Disabled_ prior to flashing the software. Debug will also not then be sent to the USB-C interface.
 
