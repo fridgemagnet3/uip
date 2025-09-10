@@ -3,7 +3,7 @@
 # using the CMOC-C cross compiler
 #
 
-all: libuip.a libapps.a UIP.BIN
+all: libuip.a libapps.a libtime UIP.BIN
 
 CC     = cmoc
 AR     = lwar
@@ -42,7 +42,7 @@ CFLAGS+=-DAPP_CALLCHAIN
 endif
 
 ARFLAGS = -c
-LDFLAGS+= -i --dragon --org=0x2000 --limit=7c00
+LDFLAGS+= -i --dragon --org=0x1900 --limit=7c00
 LIBS+= -L./ -luip -lapps
 -include ../uip/Makefile.include
 
@@ -56,6 +56,9 @@ endif
 ifneq (,$(findstring SERIAL_DRIVER,$(CFLAGS)))
 OBJS+=$(addprefix $(OBJECTDIR)/,sy6551_int_handler.o)
 endif
+
+libtime:
+	$(MAKE) -C ../time
 
 UIP.BIN: $(OBJS) libuip.a libapps.a
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
