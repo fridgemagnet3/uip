@@ -126,10 +126,12 @@ static void display_json_solar_data(char *json_data)
       if ( ptr )
       {
         ptr++ ;
+#if _CMOC_VERSION_<1094
         // the cmoc string to number routines don't seem to
-        // like leading spaces...
+        // like whitespace...
         while((*ptr==' ') || (*ptr=='\t'))
           ptr++ ;
+#endif          
         // find and decode matches of interest
         if ( !strcmp(name,"dataTimestamp") )
         {

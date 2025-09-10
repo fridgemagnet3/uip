@@ -56,7 +56,7 @@ void weather_udp_appcall(void)
       // weather data comes in as a single line of text
       // comprising timestamp, temperature, windspeed, rainfall
       // each delimited by a space
-#if !defined(_CMOC_VERSION_) || _CMOC_VERSION_>1090   
+#if !defined(_CMOC_VERSION_)
       weather.timestamp = strtoul(weather_data,&delim,10) ;
       weather.temp = strtof(delim,&delim) ;
       weather.wind = strtof(delim,&delim) ;
@@ -93,7 +93,7 @@ void weather_udp_appcall(void)
        u16_t *current_cursor = (u16_t*)0x88 ;
        *current_cursor = 0x520 ;
 #endif
-        output_weather_data(display_str) ;
+       output_weather_data(display_str) ;
       }
     }
   }
