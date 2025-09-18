@@ -26,7 +26,7 @@ Coincidently, this happens to be the same port I use for [broadcasting my solar 
 
 ![solar-weather-metrics](https://github.com/user-attachments/assets/8e00a911-3eaf-4bd7-bc88-7a983dbc8233)
 
-Also pictured is the output of another app which receives & decodes UDP data from my [weather station](https://www.oasw.co.uk/weather/about.html).
+Also pictured is the output of another app which receives & decodes UDP data from my [weather station](https://github.com/fridgemagnet3/rpi-weatherstation).
 
 The configuration also includes a telnet server which allows this data to be retrieved:
 
