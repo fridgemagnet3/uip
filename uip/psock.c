@@ -176,6 +176,15 @@ data_acked(register struct psock *s)
   }
   return 0;
 }
+
+static char
+data_acked_and_sent(register struct psock *s)
+{
+    char acked = data_acked(s);
+    char sent = send_data(s);
+    return acked & sent;
+}
+
 /*---------------------------------------------------------------------------*/
 PT_THREAD(psock_send(register struct psock *s, const char *buf,
 		     unsigned int len))
@@ -208,7 +217,7 @@ PT_THREAD(psock_send(register struct psock *s, const char *buf,
      * && operator, which would cause only the data_acked() function
      * to be called when it returns false.
      */
-    PT_WAIT_UNTIL(&s->psockpt, data_acked(s) & send_data(s));
+    PT_WAIT_UNTIL(&s->psockpt, data_acked_and_sent(s));
   }
 
   s->state = STATE_NONE;
@@ -239,7 +248,7 @@ PT_THREAD(psock_generator_send(register struct psock *s,
       generate(arg);
     }
     /* Wait until all data is sent and acknowledged. */
-    PT_WAIT_UNTIL(&s->psockpt, data_acked(s) & send_data(s));
+    PT_WAIT_UNTIL(&s->psockpt, data_acked_and_sent(s));
   } while(s->sendlen > 0);
   
   s->state = STATE_NONE;

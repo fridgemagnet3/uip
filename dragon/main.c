@@ -64,6 +64,9 @@ int main(void)
 #ifdef APP_WEATHERUDP
   weather_udp_init() ;
 #endif
+#ifdef APP_HELLOWORLD
+  hello_world_init();
+#endif
 #ifdef APP_WEBCLIENT
   u8_t key = 0 ;
   webclient_init();

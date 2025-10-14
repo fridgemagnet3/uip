@@ -151,6 +151,9 @@ typedef unsigned short uip_stats_t;
    will be serviced. These should also be included with the application
    that has the largest appstate data FIRST (per protocol) to ensure 
    enough space is reserved. */
+#ifdef APP_WEBCLIENT
+#include "webclient.h"
+#endif
 #ifdef APP_SMTP
 #include "smtp.h"
 #endif
@@ -168,9 +171,6 @@ typedef unsigned short uip_stats_t;
 #endif
 #ifdef APP_RESOLV
 #include "resolv.h"
-#endif
-#ifdef APP_WEBCLIENT
-#include "webclient.h"
 #endif
 #ifdef APP_SOLARUDP
 #include "solar-udp.h"

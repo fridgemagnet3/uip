@@ -40,6 +40,9 @@ endif
 ifneq (,$(findstring callchain,$(APPS)))
 CFLAGS+=-DAPP_CALLCHAIN
 endif
+ifneq (,$(findstring hello-world,$(APPS)))
+CFLAGS+=-DAPP_HELLOWORLD
+endif
 
 ARFLAGS = -c
 LDFLAGS+= -i --dragon --org=0x1900 --limit=7c00
