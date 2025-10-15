@@ -64,6 +64,9 @@ endif
 ifneq (,$(findstring hello-world,$(APPS)))
 CFLAGS+=-DAPP_HELLOWORLD
 endif
+ifneq (,$(findstring smtp,$(APPS)))
+CFLAGS+=-DAPP_SMTP
+endif
 
 -include ../uip/Makefile.include
 ARFLAGS = rcf

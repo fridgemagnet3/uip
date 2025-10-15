@@ -48,6 +48,7 @@
 #define __SMTP_H__
 
 #include "uipopt.h"
+#include "psock.h"
 
 /**
  * Error number that signifies a non-error condition.
@@ -70,7 +71,7 @@ void smtp_init(void);
 
 /* Functions. */
 void smtp_configure(char *localhostname, u16_t *smtpserver);
-unsigned char smtp_send(char *to, char *from,
+unsigned char smtp_send(char *to, char *cc, char *from,
 			char *subject, char *msg,
 			u16_t msglen);
 #define SMTP_SEND(to, cc, from, subject, msg) \
@@ -79,13 +80,16 @@ unsigned char smtp_send(char *to, char *from,
 void smtp_appcall(void);
 
 struct smtp_state {
-  u8_t state;
+  struct psock psock;
+  u8_t connected;
   char *to;
   char *from;
+  char *cc;
   char *subject;
+  char *date ;
   char *msg;
   u16_t msglen;
-  
+  char inputbuffer[50];
   u16_t sentlen, textlen;
   u16_t sendptr;
 

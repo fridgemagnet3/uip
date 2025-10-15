@@ -97,11 +97,12 @@ main(void)
 #endif
 
 #ifdef APP_SMTP
-  /*uip_ipaddr(ipaddr, 127,0,0,1);
-  smtp_configure("localhost", ipaddr);
-  SMTP_SEND("adam@sics.se", NULL, "uip-testing@example.com",
+  uip_ipaddr(ipaddr, 192,168,0,201);
+  smtp_configure("uipmail", ipaddr);
+  printf("Sending test email...\n") ;
+  SMTP_SEND("jon@onasticksoftware.net", NULL, "jon@uipmail.onasticksoftware.net",
 	    "Testing SMTP from uIP",
-	    "Test message sent by uIP\r\n");*/
+	    "Test message sent by uIP\r\n");
 #endif
 
 #ifdef APP_WEBCLIENT

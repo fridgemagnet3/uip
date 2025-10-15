@@ -60,7 +60,12 @@
 #include "psock.h"
 #include "uip.h"
 
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
+#include <time.h>
 #include <string.h>
+#endif
 
 static struct smtp_state s;
 
@@ -170,6 +175,10 @@ PT_THREAD(smtp_thread(void))
   PSOCK_SEND_STR(&s.psock, s.subject);
   PSOCK_SEND_STR(&s.psock, (char *)smtp_crnl);
 
+  PSOCK_SEND_STR(&s.psock, (char *)smtp_date);
+  PSOCK_SEND_STR(&s.psock, s.date);
+  PSOCK_SEND_STR(&s.psock, (char *)smtp_crnl);
+
   PSOCK_SEND(&s.psock, s.msg, s.msglen);
   
   PSOCK_SEND_STR(&s.psock, (char *)smtp_crnlperiodcrnl);
@@ -183,6 +192,7 @@ PT_THREAD(smtp_thread(void))
 
   PSOCK_SEND_STR(&s.psock, (char *)smtp_quit);
   smtp_done(SMTP_ERR_OK);
+  PSOCK_CLOSE(&s.psock);
   PSOCK_END(&s.psock);
 }
 /*---------------------------------------------------------------------------*/
@@ -213,7 +223,7 @@ smtp_appcall(void)
  * address of the SMTP server to be configured.
  */
 void
-smtp_configure(char *lhostname, void *server)
+smtp_configure(char *lhostname, u16_t *server)
 {
   localhostname = lhostname;
   uip_ipaddr_copy(smtpserver, server);
@@ -234,7 +244,10 @@ smtp_send(char *to, char *cc, char *from,
 	  char *subject, char *msg, u16_t msglen)
 {
   struct uip_conn *conn;
-
+  struct tm *tm ;
+  time_t time_now ;
+  static char buf[80] ;
+  
   conn = uip_connect(smtpserver, HTONS(25));
   if(conn == NULL) {
     return 0;
@@ -244,6 +257,15 @@ smtp_send(char *to, char *cc, char *from,
   s.cc = cc;
   s.from = from;
   s.subject = subject;
+
+#ifndef _CMOC_VERSION_
+  time_now = time(NULL) ;
+  tm = gmtime(&time_now) ;
+  strftime(buf,sizeof(buf), "%a, %d %b %Y %H:%M:%S %z",tm) ;
+  s.date = buf ;
+#else
+  s.date = "Wed, 15 Oct 2025 19:07:00 +0000" ;
+#endif
   s.msg = msg;
   s.msglen = msglen;
 
