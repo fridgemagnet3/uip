@@ -43,6 +43,9 @@ endif
 ifneq (,$(findstring hello-world,$(APPS)))
 CFLAGS+=-DAPP_HELLOWORLD
 endif
+ifneq (,$(findstring smtp,$(APPS)))
+CFLAGS+=-DAPP_SMTP
+endif
 
 ARFLAGS = -c
 LDFLAGS+= -i --dragon --org=0x1900 --limit=7c00

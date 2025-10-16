@@ -12,6 +12,10 @@
 
 #define BUF ((struct uip_eth_hdr *)&uip_buf[0])
 
+#ifdef APP_SMTP
+static void send_email(void) ;
+#endif
+
 int main(void)
 {
   uip_ipaddr_t ipaddr;
@@ -20,6 +24,7 @@ int main(void)
   const u8_t mac_addr[] = { 0xa0,0x6f,0x6b,0xbb,0xc9,0xb9 } ;
   struct uip_eth_addr eth_mac_addr ;
   int i ;
+  u8_t key = 0 ;
   
   printf( "Starting up..\n" );
   timer_set(&periodic_timer, CLOCK_SECOND / 2);
@@ -67,8 +72,8 @@ int main(void)
 #ifdef APP_HELLOWORLD
   hello_world_init();
 #endif
+
 #ifdef APP_WEBCLIENT
-  u8_t key = 0 ;
   webclient_init();
 #ifdef WEB_GRAPHICS
   // switch to map 1 (64K RAM mode) & copy BASIC ROM across
@@ -86,10 +91,18 @@ int main(void)
 #endif
 #endif
 
+#ifdef APP_SMTP
+  // IP address of SMTP outgoing server
+  // this needs to be set regardless of DHCP config
+  uip_ipaddr(ipaddr, 192,168,0,201);
+  smtp_configure("dragon64", ipaddr);
+  printf("Press a key to send an email\n") ;
+#endif
+
   printf( "Entering main loop\n" ) ;
   while(1)
   {
-#ifdef APP_WEBCLIENT
+#if defined(APP_WEBCLIENT) || defined(APP_SMTP)
     // poll for keypress
     asm
     {
@@ -99,6 +112,7 @@ int main(void)
     // issue request when keypress detected
     if ( key )
     {
+#ifdef APP_WEBCLIENT
 #ifdef APP_RESOLV
       printf("Issuing DNS lookup...\n") ;
 #ifdef APP_DHCPC
@@ -106,18 +120,26 @@ int main(void)
       resolv_query("www.oasw.co.uk");
 #else
       resolv_query("monolith.onasticksoftware.net");
-#endif
-#else
+#endif // DHCP
+
+#else // DNS
       printf("Issuing web request...\n") ;
 #ifdef WEB_GRAPHICS
       webclient_get("192.168.0.201", 80, "/dragon-logo.bin");
 #else
       webclient_get("192.168.0.201", 80, "/dragon.txt");
 #endif
+
+#endif // DNS
+
+#else // smtp app
+
+  send_email() ;
+
 #endif
     }
 
-#endif
+#endif  // webclient or smtp app
 
     uip_len = slipdev_read();
     if(uip_len > 0) 
@@ -298,5 +320,63 @@ void webclient_datahandler(char *data, u16_t len)
 #else
     putstr(data,len);
 #endif
+}
+#endif
+
+#ifdef APP_SMTP
+
+// beware using this with a configuration that's generating a fair
+// amount of traffic because nothing will get serviced whilst this is running...
+static void send_email(void)
+{
+  static char from_addr[40] ;
+  static char to_addr[40] ;
+  static char subject[50] ;
+  static char msg[256] ;
+  char *p ;
+
+  printf("FROM: " ) ;
+  p = readline() ;
+  if ( !p )
+  {
+    printf("ERROR READING INPUT\n") ;
+    return ;
+  }
+  strcpy(from_addr,p) ;
+  
+  printf("TO: " ) ;
+  p = readline() ;
+  if ( !p )
+  {
+    printf("ERROR READING INPUT\n") ;
+    return ;
+  }
+  strcpy(to_addr,p) ;
+  printf("SUBJ: " ) ;
+  p = readline() ;
+  if ( !p )
+  {
+    printf("ERROR READING INPUT\n") ;
+    return ;
+  }
+  strcpy(subject,p) ;
+  printf("MSG: " ) ;
+  p = readline() ;
+  if ( !p )
+  {
+    printf("ERROR READING INPUT\n") ;
+    return ;
+  }
+  strcpy(msg,p) ;
+  
+  printf("Sending email...\n") ;
+  SMTP_SEND(to_addr, NULL, from_addr,
+	        subject, msg);
+}
+
+// callback invoked when SMTP transaction is complete
+void smtp_done(unsigned char code)
+{
+  printf("SMTP done with code %d\n", code);
 }
 #endif

@@ -199,6 +199,9 @@ typedef unsigned short uip_stats_t;
 #ifdef APP_HELLOWORLD
 #include "hello-world.h"
 #endif
+#ifdef APP_SMTP
+#include "smtp.h"
+#endif
 // this must be the last thing in the list
 #ifdef APP_CALLCHAIN
 #include "app-callchain.h"

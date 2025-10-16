@@ -70,7 +70,7 @@ void smtp_done(unsigned char error);
 void smtp_init(void);
 
 /* Functions. */
-void smtp_configure(char *localhostname, u16_t *smtpserver);
+void smtp_configure(const char *localhostname, const u16_t *smtpserver);
 unsigned char smtp_send(char *to, char *cc, char *from,
 			char *subject, char *msg,
 			u16_t msglen);
@@ -98,8 +98,8 @@ struct smtp_state {
 
 #ifndef UIP_APPCALL
 #define UIP_APPCALL     smtp_appcall
-#endif
 typedef struct smtp_state uip_tcp_appstate_t;
+#endif
 
 
 #endif /* __SMTP_H__ */

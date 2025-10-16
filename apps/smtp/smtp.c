@@ -63,14 +63,14 @@
 #ifdef _CMOC_VERSION_
 #include <cmoc.h>
 #else
-#include <time.h>
 #include <string.h>
 #endif
+#include <time.h>
 
 static struct smtp_state s;
 
-static char *localhostname;
-static uip_ipaddr_t smtpserver;
+static const char *localhostname;
+static const uip_ipaddr_t smtpserver;
 
 #define ISO_nl 0x0a
 #define ISO_cr 0x0d
@@ -223,7 +223,7 @@ smtp_appcall(void)
  * address of the SMTP server to be configured.
  */
 void
-smtp_configure(char *lhostname, u16_t *server)
+smtp_configure(const char *lhostname, const u16_t *server)
 {
   localhostname = lhostname;
   uip_ipaddr_copy(smtpserver, server);

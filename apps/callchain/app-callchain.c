@@ -17,6 +17,12 @@ void callchain_tcp_appcall(void)
 #ifdef APP_HTTPD
     httpd_appcall() ;
 #endif
+#ifdef APP_SMTP
+    smtp_appcall() ;
+#endif
+#ifdef APP_HELLOWORLD
+    hello_world_appcall() ;
+#endif
   }
 }
 
