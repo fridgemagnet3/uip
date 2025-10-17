@@ -331,6 +331,9 @@ newdata(void)
 void
 telnetd_appcall(void)
 {
+  if ( uip_conn->lport != HTONS(23))
+    return ;
+     
   static unsigned int i;
   if(uip_connected()) {
     /*    tcp_markconn(uip_conn, &s);*/

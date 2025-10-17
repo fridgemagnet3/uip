@@ -388,6 +388,9 @@ newdata(void)
 void
 webclient_appcall(void)
 {
+  if ( uip_conn->rport != HTONS(80))
+    return ;
+
   if(uip_connected()) {
     s.timer = 0;
     s.state = WEBCLIENT_STATE_STATUSLINE;

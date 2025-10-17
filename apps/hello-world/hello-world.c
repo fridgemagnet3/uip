@@ -58,27 +58,30 @@ hello_world_init(void)
 void
 hello_world_appcall(void)
 {
-  /*
-   * The uip_conn structure has a field called "appstate" that holds
-   * the application state of the connection. We make a pointer to
-   * this to access it easier.
-   */
-  struct hello_world_state *s = &(uip_conn->appstate);
-
-  /*
-   * If a new connection was just established, we should initialize
-   * the protosocket in our applications' state structure.
-   */
-  if(uip_connected()) {
-    PSOCK_INIT(&s->p, s->inputbuffer, sizeof(s->inputbuffer));
+  if ( uip_conn->lport == HTONS(1000))
+  {
+  	/*
+   	* The uip_conn structure has a field called "appstate" that holds
+   	* the application state of the connection. We make a pointer to
+   	* this to access it easier.
+   	*/
+  	struct hello_world_state *s = (struct hello_world_state*)&(uip_conn->appstate);
+	
+  	/*
+   	* If a new connection was just established, we should initialize
+   	* the protosocket in our applications' state structure.
+   	*/
+  	if(uip_connected()) {
+    	PSOCK_INIT(&s->p, s->inputbuffer, sizeof(s->inputbuffer));
+  	}
+	
+  	/*
+   	* Finally, we run the protosocket function that actually handles
+   	* the communication. We pass it a pointer to the application state
+   	* of the current connection.
+   	*/
+  	handle_connection(s);
   }
-
-  /*
-   * Finally, we run the protosocket function that actually handles
-   * the communication. We pass it a pointer to the application state
-   * of the current connection.
-   */
-  handle_connection(s);
 }
 /*---------------------------------------------------------------------------*/
 /*
