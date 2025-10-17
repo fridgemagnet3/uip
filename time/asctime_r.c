@@ -5,18 +5,18 @@
 #include <cmoc.h>
 #include "time.h"
 
-char *
-asctime_r (const struct tm *tim_p,
-	char *result)
-{
-  static const char *day_name[7] = {
+const char *day_name[7] = {
 	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
   };
-  static const char *mon_name[12] = {
+const char *mon_name[12] = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun", 
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   };
 
+char *
+asctime_r (const struct tm *tim_p,
+	char *result)
+{
   sprintf (result, "%s %s%3d %02d:%02d:%02d %d\n",
 	    day_name[tim_p->tm_wday], 
 	    mon_name[tim_p->tm_mon],

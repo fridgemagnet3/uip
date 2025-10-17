@@ -45,5 +45,14 @@ char *asctime_r	(const struct tm *tim_p,
 struct tm *gmtime_r (const time_t *tim_p,
 				     struct tm *res);
 
+// return system time
+// note that in the absence of anything calling
+// 'stime', the time will originate from the point
+// this library was built
+time_t time(time_t *tloc) ;
+
+// set system time
+int stime(const time_t *t) ;
+
 #endif
 

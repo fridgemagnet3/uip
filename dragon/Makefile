@@ -45,6 +45,7 @@ CFLAGS+=-DAPP_HELLOWORLD
 endif
 ifneq (,$(findstring smtp,$(APPS)))
 CFLAGS+=-DAPP_SMTP
+LIBS = -L../time -ltime
 endif
 
 ARFLAGS = -c

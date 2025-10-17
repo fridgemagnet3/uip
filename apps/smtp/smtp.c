@@ -258,14 +258,27 @@ smtp_send(char *to, char *cc, char *from,
   s.from = from;
   s.subject = subject;
 
-#ifndef _CMOC_VERSION_
   time_now = time(NULL) ;
   tm = gmtime(&time_now) ;
-  strftime(buf,sizeof(buf), "%a, %d %b %Y %H:%M:%S %z",tm) ;
   s.date = buf ;
+
+#ifndef _CMOC_VERSION_
+  strftime(buf,sizeof(buf), "%a, %d %b %Y %H:%M:%S %z",tm) ;
 #else
-  s.date = "Wed, 15 Oct 2025 19:07:00 +0000" ;
+  // these are buried inside the time library in asctime_r.c 
+  extern const char *day_name[7] ;
+  extern const char *mon_name[12] ;
+  
+  sprintf(buf,"%s, %d %s %d %02d:%02d:%02d +0000",
+       day_name[tm->tm_wday], 
+       tm->tm_mday,
+       mon_name[tm->tm_mon],
+       1900 + tm->tm_year,
+       tm->tm_hour, 
+       tm->tm_min,
+       tm->tm_sec ) ;
 #endif
+
   s.msg = msg;
   s.msglen = msglen;
 
