@@ -169,6 +169,20 @@ typedef unsigned short uip_stats_t;
 // and a custom TCP checksum
 #define UIP_ARCH_TCPCHKSUM 1
 
+// This stops the following headers being pulled when the
+// individual apps themselves are built because they need to correctly define
+// the appcall structures in order to operate properly - if not (and the 
+// multi-app callchain is in play), they can end up just being the dummy structure
+// created by that and then things either don't build or work properly.
+// Hence any new apps need to add to this list..
+//
+// This is messy and I don't like it but within the confines of how this all
+// hangs together, the best I could come up with.
+#if !(defined(__DHCPC_H__) || defined(__HELLO_WORLD_H__) || \
+defined(__RESOLV_H__) || defined(__SMTP_H__) || defined(SOLAR_UDP_H) || \
+defined(__TELNETD_H__) || defined(WEATHER_UDP_H) || defined(__WEBCLIENT_H__) || \
+defined(__WEBSERVER_H__))
+
 /* Here we include the header file for the application(s) we use in
    our project. Note that if multiple applications are defined, unless
    the callchain app is used, only (the first listed here per protocol)
@@ -205,6 +219,8 @@ typedef unsigned short uip_stats_t;
 // this must be the last thing in the list
 #ifdef APP_CALLCHAIN
 #include "app-callchain.h"
+#endif
+
 #endif
 
 #endif /* __UIP_CONF_H__ */
