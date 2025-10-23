@@ -47,6 +47,10 @@ ifneq (,$(findstring smtp,$(APPS)))
 CFLAGS+=-DAPP_SMTP
 LIBS = -L../time -ltime
 endif
+ifneq (,$(findstring ntpclient,$(APPS)))
+CFLAGS+=-DAPP_NTP
+LIBS = -L../time -ltime
+endif
 
 ARFLAGS = -c
 LDFLAGS+= -i --dragon --org=0x1900 --limit=7c00

@@ -43,5 +43,8 @@ void callchain_udp_appcall(void)
 #ifdef APP_WEATHERUDP
     weather_udp_appcall() ;
 #endif
+#ifdef APP_NTP
+    ntp_appcall() ;
+#endif
   }
 }

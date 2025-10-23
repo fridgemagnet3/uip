@@ -127,7 +127,9 @@ typedef unsigned short uip_stats_t;
  *
  * \hideinitializer
  */
-#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV) || defined(APP_DHCPC)
+#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV) || \
+defined(APP_DHCPC) || defined(APP_NTP)
+
 #define UIP_CONF_UDP             1
 /**
  * UDP checksums on or off
@@ -178,10 +180,10 @@ typedef unsigned short uip_stats_t;
 //
 // This is messy and I don't like it but within the confines of how this all
 // hangs together, the best I could come up with.
-#if !(defined(__DHCPC_H__) || defined(__HELLO_WORLD_H__) || \
-defined(__RESOLV_H__) || defined(__SMTP_H__) || defined(SOLAR_UDP_H) || \
-defined(__TELNETD_H__) || defined(WEATHER_UDP_H) || defined(__WEBCLIENT_H__) || \
-defined(__WEBSERVER_H__))
+
+#if !(defined(__HELLO_WORLD_H__) || defined(__SMTP_H__) \
+ || defined(__TELNETD_H__) || defined(__WEBCLIENT_H__) \
+ || defined(__WEBSERVER_H__))
 
 /* Here we include the header file for the application(s) we use in
    our project. Note that if multiple applications are defined, unless
@@ -189,6 +191,8 @@ defined(__WEBSERVER_H__))
    will be serviced. These should also be included with the application
    that has the largest appstate data FIRST (per protocol) to ensure 
    enough space is reserved. */
+
+// TCP based apps
 #ifdef APP_WEBCLIENT
 #include "webclient.h"
 #endif
@@ -198,6 +202,20 @@ defined(__WEBSERVER_H__))
 #ifdef APP_HTTPD
 #include "webserver.h"
 #endif
+#ifdef APP_HELLOWORLD
+#include "hello-world.h"
+#endif
+#ifdef APP_SMTP
+#include "smtp.h"
+#endif
+
+#endif // included from a TCP app
+
+#if !(defined(__DHCPC_H__) || defined(__RESOLV_H__) \
+ || defined(SOLAR_UDP_H) || defined(WEATHER_UDP_H) \
+ || defined(NTPCLIENT_H))
+
+// UDP based apps
 #ifdef APP_DHCPC
 #include "dhcpc.h"
 #endif
@@ -210,11 +228,8 @@ defined(__WEBSERVER_H__))
 #ifdef APP_WEATHERUDP
 #include "weather-udp.h"
 #endif
-#ifdef APP_HELLOWORLD
-#include "hello-world.h"
-#endif
-#ifdef APP_SMTP
-#include "smtp.h"
+#ifdef APP_NTP
+#include "ntpclient.h"
 #endif
 // this must be the last thing in the list
 #ifdef APP_CALLCHAIN

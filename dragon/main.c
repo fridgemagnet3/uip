@@ -16,6 +16,12 @@
 static void send_email(void) ;
 #endif
 
+#ifdef APP_RESOLV
+// the type of query currently being resolved
+typedef enum { RESOLV_NONE, RESOLV_WEBSERVER, RESOLV_SMTPSERVER, RESOLV_NTPSERVER } resolv_query_t ;
+static resolv_query_t resolv_q = RESOLV_NONE ;
+#endif
+
 int main(void)
 {
   uip_ipaddr_t ipaddr;
@@ -60,6 +66,7 @@ int main(void)
   dhcpc_init(&mac_addr, 6);
 #endif
   
+  // app initialisations....
 #ifdef APP_TELNETD
   telnetd_init();
 #endif
@@ -82,6 +89,7 @@ int main(void)
 #endif
   printf("Press a key to issue web request\n") ;
 #endif
+
 #ifdef APP_RESOLV
   resolv_init();
 #ifndef APP_DHCPC  
@@ -91,11 +99,23 @@ int main(void)
 #endif
 #endif
 
-#ifdef APP_SMTP
-  // IP address of SMTP outgoing server
-  // this needs to be set regardless of DHCP config
+#ifdef APP_NTP
+#ifdef APP_RESOLV
+   printf("DNS lookup for NTP server..\n") ;
+   // DNS lookup of NTP server, the NTP request
+   // is then handled by the resolv_done callback
+   resolv_query("monolith.onasticksoftware.net");
+   resolv_q = RESOLV_NTPSERVER ;
+#else
+  // address of NTP server
   uip_ipaddr(ipaddr, 192,168,0,201);
-  smtp_configure("dragon64", ipaddr);
+  ntp_init(ipaddr);
+  printf("Issuing NTP query...\n") ;
+  ntp_query() ;
+#endif
+#endif
+
+#ifdef APP_SMTP
   printf("Press a key to send an email\n") ;
 #endif
 
@@ -114,15 +134,16 @@ int main(void)
     {
 #ifdef APP_WEBCLIENT
 #ifdef APP_RESOLV
-      printf("Issuing DNS lookup...\n") ;
+      printf("DNS lookup for web server...\n") ;
 #ifdef APP_DHCPC
       // assume if DHCP assigned, can get on t'internet
       resolv_query("www.oasw.co.uk");
 #else
       resolv_query("monolith.onasticksoftware.net");
 #endif // DHCP
+      resolv_q = RESOLV_WEBSERVER ;
 
-#else // DNS
+#else // no DNS
       printf("Issuing web request...\n") ;
 #ifdef WEB_GRAPHICS
       webclient_get("192.168.0.201", 80, "/dragon-logo.bin");
@@ -134,7 +155,17 @@ int main(void)
 
 #else // smtp app
 
+#ifndef APP_RESOLV
+  // IP address of SMTP outgoing server
+  uip_ipaddr(ipaddr, 192,168,0,201);
+  smtp_configure("dragon64", ipaddr);
   send_email() ;
+#else
+  printf("DNS lookup for mail server...\n") ;
+  resolv_query("mail.onasticksoftware.net");
+  resolv_q = RESOLV_SMTPSERVER ;
+  // email config & send is handled by the resolv_done callback
+#endif
 
 #endif
     }
@@ -232,15 +263,40 @@ void resolv_found(char *name, u16_t *ipaddr)
 	   htons(ipaddr[0]) & 0xff,
 	   htons(ipaddr[1]) >> 8,
 	   htons(ipaddr[1]) & 0xff);
-#ifdef APP_WEBCLIENT	   
-       printf("Issuing web request...\n") ;
+#ifdef APP_WEBCLIENT
+       // DNS has resolved name of webserver, issue the request
+       if ( resolv_q == RESOLV_WEBSERVER )
+       {
+         printf("Issuing web request...\n") ;
 #ifdef WEB_GRAPHICS
-       webclient_get(name, 80, "/dragon-logo.bin");
+         webclient_get(name, 80, "/dragon-logo.bin");
 #else
-       webclient_get(name, 80, "/dragon.txt");
+         webclient_get(name, 80, "/dragon.txt");
 #endif
+       }
 #endif       
+
+#ifdef APP_NTP
+    // DNS has resolved name of NTP server, issue the request
+    if ( resolv_q == RESOLV_NTPSERVER )
+    {
+      ntp_init(ipaddr);
+      printf("Issuing NTP query...\n") ;
+      ntp_query() ;
+    }
+#endif
+
+#ifdef APP_SMTP
+    // DNS has resolved name of SMTP server, configure
+    // and send the email
+    if ( resolv_q == RESOLV_SMTPSERVER )
+    {
+      smtp_configure("dragon64", ipaddr);
+      send_email() ;
+    }
+#endif
   }
+  resolv_q = RESOLV_NONE ;
 }
 #endif
 
@@ -378,5 +434,20 @@ static void send_email(void)
 void smtp_done(unsigned char code)
 {
   printf("SMTP done with code %d\n", code);
+}
+#endif
+
+#ifdef APP_NTP
+// callback invoked when NTP time is acquired
+void ntp_done(time_t ntp_time)
+{
+  struct tm tm ;
+  char buf[36] ;
+  
+  gmtime_r(&ntp_time,&tm) ;
+  asctime_r(&tm,buf) ;
+  printf("NTP time: %s\n",buf) ;
+  // set the system time
+  stime(&ntp_time);
 }
 #endif
