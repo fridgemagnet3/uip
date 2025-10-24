@@ -22,6 +22,10 @@ typedef enum { RESOLV_NONE, RESOLV_WEBSERVER, RESOLV_SMTPSERVER, RESOLV_NTPSERVE
 static resolv_query_t resolv_q = RESOLV_NONE ;
 #endif
 
+#ifdef APP_NTP
+static void issue_ntp_query(void) ;
+#endif
+
 int main(void)
 {
   uip_ipaddr_t ipaddr;
@@ -99,20 +103,9 @@ int main(void)
 #endif
 #endif
 
-#ifdef APP_NTP
-#ifdef APP_RESOLV
-   printf("DNS lookup for NTP server..\n") ;
-   // DNS lookup of NTP server, the NTP request
-   // is then handled by the resolv_done callback
-   resolv_query("monolith.onasticksoftware.net");
-   resolv_q = RESOLV_NTPSERVER ;
-#else
-  // address of NTP server
-  uip_ipaddr(ipaddr, 192,168,0,201);
-  ntp_init(ipaddr);
-  printf("Issuing NTP query...\n") ;
-  ntp_query() ;
-#endif
+#if defined(APP_NTP) && !defined(APP_DHCPC)
+  // in a static IP configuration, kick off the NTP query now
+  issue_ntp_query() ;
 #endif
 
 #ifdef APP_SMTP
@@ -312,6 +305,10 @@ void dhcpc_configured(const struct dhcpc_state *s)
 #ifdef APP_RESOLV
   resolv_conf(s->dnsaddr);
 #endif
+#ifdef APP_NTP
+  // can kick of the NTP query now we're configured
+  issue_ntp_query() ;
+#endif
 }
 #endif 
 
@@ -438,6 +435,25 @@ void smtp_done(unsigned char code)
 #endif
 
 #ifdef APP_NTP
+
+// kick of the NTP query process
+static void issue_ntp_query(void) 
+{
+#ifdef APP_RESOLV
+  printf("DNS lookup for NTP server..\n") ;
+  // DNS lookup of NTP server, the NTP request
+  // is then handled by the resolv_done callback
+  resolv_query("monolith.onasticksoftware.net");
+  resolv_q = RESOLV_NTPSERVER ;
+#else
+ // address of NTP server
+ uip_ipaddr(ipaddr, 192,168,0,201);
+ ntp_init(ipaddr);
+ printf("Issuing NTP query...\n") ;
+ ntp_query() ;
+#endif
+}
+
 // callback invoked when NTP time is acquired
 void ntp_done(time_t ntp_time)
 {

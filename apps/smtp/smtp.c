@@ -244,7 +244,7 @@ smtp_send(char *to, char *cc, char *from,
 	  char *subject, char *msg, u16_t msglen)
 {
   struct uip_conn *conn;
-  struct tm *tm ;
+  struct tm tm ;
   time_t time_now ;
   static char buf[80] ;
   
@@ -259,24 +259,24 @@ smtp_send(char *to, char *cc, char *from,
   s.subject = subject;
 
   time_now = time(NULL) ;
-  tm = gmtime(&time_now) ;
+  gmtime_r(&time_now,&tm) ;
   s.date = buf ;
 
 #ifndef _CMOC_VERSION_
-  strftime(buf,sizeof(buf), "%a, %d %b %Y %H:%M:%S %z",tm) ;
+  strftime(buf,sizeof(buf), "%a, %d %b %Y %H:%M:%S %z",&tm) ;
 #else
   // these are buried inside the time library in asctime_r.c 
   extern const char *day_name[7] ;
   extern const char *mon_name[12] ;
   
   sprintf(buf,"%s, %d %s %d %02d:%02d:%02d +0000",
-       day_name[tm->tm_wday], 
-       tm->tm_mday,
-       mon_name[tm->tm_mon],
-       1900 + tm->tm_year,
-       tm->tm_hour, 
-       tm->tm_min,
-       tm->tm_sec ) ;
+       day_name[tm.tm_wday], 
+       tm.tm_mday,
+       mon_name[tm.tm_mon],
+       1900 + tm.tm_year,
+       tm.tm_hour, 
+       tm.tm_min,
+       tm.tm_sec ) ;
 #endif
 
   s.msg = msg;
