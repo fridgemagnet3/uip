@@ -171,12 +171,13 @@ defined(APP_DHCPC) || defined(APP_NTP)
 // and a custom TCP checksum
 #define UIP_ARCH_TCPCHKSUM 1
 
-// This stops the following headers being pulled when the
+// This guard stops the following headers being pulled when the
 // individual apps themselves are built because they need to correctly define
 // the appcall structures in order to operate properly - if not (and the 
 // multi-app callchain is in play), they can end up just being the dummy structure
 // created by that and then things either don't build or work properly.
-// Hence any new apps need to add to this list..
+// Hence any new apps need to add to this list.. Additionally it also needs
+// to be grouped by protocol. 
 //
 // This is messy and I don't like it but within the confines of how this all
 // hangs together, the best I could come up with.
@@ -236,7 +237,20 @@ defined(APP_DHCPC) || defined(APP_NTP)
 #include "app-callchain.h"
 #endif
 
+#else
+
+// The UIP stack requires that at least one TCP app
+// be enabled, in a configuration that doesn't want
+// one, the easiest way to achieve this is to enable
+// the callchain app. This condition ensures that the
+// required appstate is then defined when the UDP app(s)
+// is being built
+#ifdef APP_CALLCHAIN
+#include "app-callchain.h"
+#undef UIP_UDP_APPCALL
 #endif
+
+#endif // included from a UDP app
 
 #endif /* __UIP_CONF_H__ */
 

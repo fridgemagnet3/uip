@@ -125,7 +125,9 @@ typedef unsigned short uip_stats_t;
  *
  * \hideinitializer
  */
-#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV) || defined(APP_DHCPC)
+#if defined(APP_SOLARUDP) || defined(APP_WEATHERUDP) || defined(APP_RESOLV) || \
+defined(APP_DHCPC) || defined(APP_NTP)
+
 #define UIP_CONF_UDP             1
 #else
 #define UIP_CONF_UDP             0
@@ -145,7 +147,7 @@ typedef unsigned short uip_stats_t;
  */
 #define UIP_CONF_STATISTICS      1
 
-// This stops the following headers being pulled when the
+// This guard stops the following headers being pulled when the
 // individual apps themselves are built because they need to correctly define
 // the appcall structures in order to operate properly - if not (and the 
 // multi-app callchain is in play), they can end up just being the dummy structure
@@ -154,10 +156,10 @@ typedef unsigned short uip_stats_t;
 //
 // This is messy and I don't like it but within the confines of how this all
 // hangs together, the best I could come up with.
-#if !(defined(__DHCPC_H__) || defined(__HELLO_WORLD_H__) || \
-defined(__RESOLV_H__) || defined(__SMTP_H__) || defined(SOLAR_UDP_H) || \
-defined(__TELNETD_H__) || defined(WEATHER_UDP_H) || defined(__WEBCLIENT_H__) || \
-defined(__WEBSERVER_H__))
+
+#if !(defined(__HELLO_WORLD_H__) || defined(__SMTP_H__) \
+ || defined(__TELNETD_H__) || defined(__WEBCLIENT_H__) \
+ || defined(__WEBSERVER_H__))
 
 /* Here we include the header file for the application(s) we use in
    our project. Note that if multiple applications are defined, unless
@@ -180,6 +182,13 @@ defined(__WEBSERVER_H__))
 #ifdef APP_HTTPD
 #include "webserver.h"
 #endif
+
+#endif // included from a TCP app
+
+#if !(defined(__DHCPC_H__) || defined(__RESOLV_H__) \
+ || defined(SOLAR_UDP_H) || defined(WEATHER_UDP_H) \
+ || defined(NTPCLIENT_H))
+
 #ifdef APP_DHCPC
 #include "dhcpc.h"
 #endif
@@ -189,12 +198,31 @@ defined(__WEBSERVER_H__))
 #ifdef APP_SOLARUDP
 #include "solar-udp.h"
 #endif
+#ifdef APP_WEATHERUDP
+#include "weather-udp.h"
+#endif
+#ifdef APP_NTP
+#include "ntpclient.h"
+#endif
 // this must be the last thing in the list
 #ifdef APP_CALLCHAIN
 #include "app-callchain.h"
 #endif
 
-#endif 
+#else
+
+// The UIP stack requires that at least one TCP app
+// be enabled, in a configuration that doesn't want
+// one, the easiest way to achieve this is to enable
+// the callchain app. This condition ensures that the
+// required appstate is then defined when the UDP app(s)
+// is being built
+#ifdef APP_CALLCHAIN
+#include "app-callchain.h"
+#undef UIP_UDP_APPCALL
+#endif
+
+#endif // included from a UDP app
 
 #endif /* __UIP_CONF_H__ */
 

@@ -119,7 +119,14 @@ main(void)
     printf("Issuing web request...\n") ;
     webclient_get("192.168.0.201", 80, "/index.html");
 #endif
-  
+
+#ifdef APP_NTP
+  uip_ipaddr(ipaddr, 192,168,0,201);
+  ntp_init(ipaddr);
+  printf("Issuing NTP query...\n") ;
+  ntp_query() ;
+#endif
+ 
   while(1) {
     uip_len = tapdev_read();
     if(uip_len > 0) {
@@ -230,6 +237,16 @@ smtp_done(unsigned char code)
   printf("SMTP done with code %d\n", code);
 }
 #endif
+
+#ifdef APP_NTP
+void ntp_done(time_t ntp_time)
+{
+  struct tm *tm ;
+  tm = gmtime(&ntp_time) ;
+  printf("NTP time: %s\n",asctime(tm)) ;
+}
+#endif
+
 
 #ifdef APP_WEBCLIENT
 void
