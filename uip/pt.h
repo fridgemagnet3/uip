@@ -51,6 +51,10 @@
 
 #include "lc.h"
 
+#if defined(_CMOC_VERSION_) && _CMOC_VERSION_<1097
+#warning "CMOC 0.1.97 or later is required for protothread support"
+#endif
+
 struct pt {
   lc_t lc;
 };
