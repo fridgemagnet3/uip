@@ -1,35 +1,40 @@
-This directory contains a few example applications. They are not all
-heavily tested, however.
+From the original author of uIP:
+"This directory contains a few example applications. They are not all
+heavily tested, however."
 
 Of the original UIP sample apps:
 
 dhcpd 		- builds and runs on the Dragon
-hello-world - builds but does not run (uses protosockets)
+hello-world - builds and runs on the Dragon
 resolv		- builds and runs on the Dragon
-smtp		- untried, uses protosockets so won't work in current form
+smtp		- builds and runs on the Dragon
 telnetd		- builds and runs on the Dragon
 webclient	- builds and runs on the Dragon
-webserver	- untried, uses protosockets so won't work in current form
+webserver	- untried
 
 New apps added by me:
 
 solar-udp	- builds and runs on the Dragon
 weather-udp	- builds and runs on the Dragon
 callchain	- builds and runs on the Dragon
+ntpclient   - builds and runs on the Dragon
 
 To enable an application, add it to the APPS list in the top level Makefile.
 
 As per the original UIP documentation, normally there is only support for 
 inclusion of a single application per protocol (TCP or UDP). The application
 'callchain' serves as a means of circumventing this limitation by simply
-daisy-chaining calls to the applications that have been enabled. See comments
-in the header file, it should be fairly straightforward to add new applications.
+daisy-chaining calls to the applications that have been enabled. This is a 
+little bit messy to manage, pay particular attention to the comments and
+structure of includes in uip-conf.h
 
 UDP support is only enabled if an application is included that requires it, see
 the conditional in uip-conf.h. By default, this also unconditionally enables
 UDP broadcast support. 
 
-Both the Dragon and Linux (unix) builds should operate in the same fashion now.
+Both the Dragon and Linux (unix) builds should operate more or less in the same
+fashion now although some of the combinations of things hasn't be rolled into 
+the later.
 
 Be aware when building on the Dragon, if you enable multiple applications, you 
 may need to adjust the program origin address to avoid running out of memory. 
