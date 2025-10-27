@@ -71,8 +71,6 @@ and display it on the Dragon's monitor:
 
 This only works if you've set things like IP routing/gateways etc. to allow the Dragon to reach the wider Internet - ie. the configuration includes both DHCP and DNS components. In all other configurations you'll need to modify the various IP addresses that are hardcoded into the [main application](dragon/main.c). 
 
-Any application which uses the [protosockets library](doc/html/a00158.html) (including the simple [hello world](apps/hello-world) example) **won't work properly.** This is because the underlying [protothreads library](doc/html/a00142.html) makes a whacky use of the switch() call that is similar to something called the [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device) which the current incarnation of the CMOC (6809 cross) compiler specifically states it does not support. In a nutshell, the state machine used to track the TCP connection state gets repeatedly reset & confusion then rains.
-
 ## How to build/run the stack (Xroar emulator)
 
 The stack is currently built using the [CMOC 6809 cross compiler](http://sarrazip.com/dev/cmoc.html) so you'll need to build/install this first. Then build the uIP stack:
