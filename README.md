@@ -28,7 +28,7 @@ Coincidently, this happens to be the same port I use for [broadcasting my solar 
 
 Also pictured is the output of another app which receives & decodes UDP data from my [weather station](https://github.com/fridgemagnet3/rpi-weatherstation).
 
-The configuration also includes a telnet server which allows this data to be retrieved:
+The configuration also includes a telnet server which allows this data to be retrieved remotely:
 
 `telnet 192.168.3.2`\
 `Trying 192.168.3.2...`\
@@ -61,7 +61,7 @@ Which applications are included is controlled by settings in the [Makefile](drag
 
 ![PXL_20250628_084356960_crop](https://github.com/user-attachments/assets/f238efca-10fe-4435-bc4a-8e5f753ece88)
 
-And a DNS resolver and webclient applications. The webclient demo configuration can be used to (optionally) perform a DNS lookup, then download a bitmap:
+along with a DNS resolver and webclient application. The webclient demo configuration can be used to (optionally) perform a DNS lookup, then download a bitmap:
 
 ![PXL_20250723_180706459_crop](https://github.com/user-attachments/assets/bd8b3532-e7ea-4a8b-a1cc-5ebdae2ba70f)
 
@@ -69,7 +69,11 @@ and display it on the Dragon's monitor:
 
 ![PXL_20250705_140002674_crop](https://github.com/user-attachments/assets/4de47aad-5c21-4a78-a4ea-ee1b23967b1e)
 
-This only works if you've set things like IP routing/gateways etc. to allow the Dragon to reach the wider Internet - ie. the configuration includes both DHCP and DNS components. In all other configurations you'll need to modify the various IP addresses that are hardcoded into the [main application](dragon/main.c). 
+You can also send the odd email, optionally obtaining the correct date and time from a nearby NTP server: 
+
+<img width="516" height="388" alt="email2" src="https://github.com/user-attachments/assets/ded18e77-e597-4938-a157-b4b04ec2fa16" />
+<img width="548" height="212" alt="email3" src="https://github.com/user-attachments/assets/ec1996ac-9db4-4f5a-ad5c-90a63fc36b34" />
+
 
 ## How to build/run the stack (Xroar emulator)
 
