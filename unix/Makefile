@@ -70,6 +70,9 @@ endif
 ifneq (,$(findstring ntpclient,$(APPS)))
 CFLAGS+=-DAPP_NTP
 endif
+ifneq (,$(findstring webserver,$(APPS)))
+CFLAGS+=-DAPP_HTTPD
+endif
 
 -include ../uip/Makefile.include
 ARFLAGS = rcf

@@ -61,7 +61,11 @@
 #include "httpd-cgi.h"
 #include "http-strings.h"
 
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
 #include <string.h>
+#endif
 
 #define STATE_WAITING 0
 #define STATE_OUTPUT  1
@@ -233,10 +237,13 @@ PT_THREAD(handle_output(struct httpd_state *s))
 		   send_headers(s,
 		   http_header_200));
     ptr = strchr(s->filename, ISO_period);
+#ifndef _CMOC_VERSION_
     if(ptr != NULL && strncmp(ptr, http_shtml, 6) == 0) {
       PT_INIT(&s->scriptpt);
       PT_WAIT_THREAD(&s->outputpt, handle_script(s));
-    } else {
+    } else 
+#endif    
+    {
       PT_WAIT_THREAD(&s->outputpt,
 		     send_file(s));
     }
@@ -332,6 +339,7 @@ httpd_appcall(void)
 void
 httpd_init(void)
 {
+  httpd_fs_init();
   uip_listen(HTONS(80));
 }
 /*---------------------------------------------------------------------------*/

@@ -197,17 +197,17 @@ defined(APP_DHCPC) || defined(APP_NTP)
 #ifdef APP_WEBCLIENT
 #include "webclient.h"
 #endif
-#ifdef APP_TELNETD
-#include "telnetd.h"
-#endif
 #ifdef APP_HTTPD
 #include "webserver.h"
 #endif
-#ifdef APP_HELLOWORLD
-#include "hello-world.h"
+#ifdef APP_TELNETD
+#include "telnetd.h"
 #endif
 #ifdef APP_SMTP
 #include "smtp.h"
+#endif
+#ifdef APP_HELLOWORLD
+#include "hello-world.h"
 #endif
 
 #endif // included from a TCP app

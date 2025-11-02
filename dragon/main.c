@@ -74,6 +74,9 @@ int main(void)
 #ifdef APP_TELNETD
   telnetd_init();
 #endif
+#ifdef APP_HTTPD
+  httpd_init();
+#endif
 #ifdef APP_SOLARUDP
   solar_udp_init() ;
 #endif

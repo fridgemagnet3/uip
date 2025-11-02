@@ -101,6 +101,7 @@ httpd_fs_open(const char *name, struct httpd_fs_file *file)
 void
 httpd_fs_init(void)
 {
+  init_httpd_fsdata() ;
 #if HTTPD_FS_STATISTICS
   u16_t i;
   for(i = 0; i < HTTPD_FS_NUMFILES; i++) {

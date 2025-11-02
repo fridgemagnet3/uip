@@ -41,7 +41,7 @@ struct httpd_fsdata_file {
   const struct httpd_fsdata_file *next;
   const char *name;
   const char *data;
-  const int len;
+  int len;
 #ifdef HTTPD_FS_STATISTICS
 #if HTTPD_FS_STATISTICS == 1
   u16_t count;

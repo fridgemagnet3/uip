@@ -51,8 +51,12 @@
 #include "httpd-cgi.h"
 #include "httpd-fs.h"
 
+#ifdef _CMOC_VERSION_
+#include <cmoc.h>
+#else
 #include <stdio.h>
 #include <string.h>
+#endif
 
 HTTPD_CGI_CALL(file, "file-stats", file_stats);
 HTTPD_CGI_CALL(tcp, "tcp-connections", tcp_stats);
@@ -76,7 +80,7 @@ httpd_cgi(char *name)
   /* Find the matching name in the table, return the function. */
   for(f = calls; *f != NULL; ++f) {
     if(strncmp((*f)->name, name, strlen((*f)->name)) == 0) {
-      return (*f)->function;
+      return (httpd_cgifunction)(*f)->function;
     }
   }
   return nullfunction;
@@ -86,7 +90,7 @@ static unsigned short
 generate_file_stats(void *arg)
 {
   char *f = (char *)arg;
-  return snprintf((char *)uip_appdata, UIP_APPDATA_SIZE, "%5u", httpd_fs_count(f));
+  return sprintf((char *)uip_appdata, "%5u", httpd_fs_count(f));
 }
 /*---------------------------------------------------------------------------*/
 static
@@ -145,7 +149,7 @@ generate_tcp_stats(void *arg)
   struct httpd_state *s = (struct httpd_state *)arg;
     
   conn = &uip_conns[s->count];
-  return snprintf((char *)uip_appdata, UIP_APPDATA_SIZE,
+  return sprintf((char *)uip_appdata,
 		 "<tr><td>%d</td><td>%u.%u.%u.%u:%u</td><td>%s</td><td>%u</td><td>%u</td><td>%c %c</td></tr>\r\n",
 		 htons(conn->lport),
 		 htons(conn->ripaddr[0]) >> 8,
@@ -179,7 +183,7 @@ static unsigned short
 generate_net_stats(void *arg)
 {
   struct httpd_state *s = (struct httpd_state *)arg;
-  return snprintf((char *)uip_appdata, UIP_APPDATA_SIZE,
+  return sprintf((char *)uip_appdata,
 		  "%5u\n", ((uip_stats_t *)&uip_stat)[s->count]);
 }
 

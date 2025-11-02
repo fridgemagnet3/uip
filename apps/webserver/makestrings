@@ -25,7 +25,7 @@ sub stringify {
       for($j = 0; $j < length($datan); $j++) {
 	printf(OUTPUTC "%#02x, ", unpack("C", substr($datan, $j, 1)));
       }
-      printf(OUTPUTC "};\n");
+      printf(OUTPUTC "0x0};\n");
       
       printf(OUTPUTH "extern const char $var\[%d];\n", length($datan) + 1);
       
