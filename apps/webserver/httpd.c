@@ -237,12 +237,10 @@ PT_THREAD(handle_output(struct httpd_state *s))
 		   send_headers(s,
 		   http_header_200));
     ptr = strchr(s->filename, ISO_period);
-#ifndef _CMOC_VERSION_
     if(ptr != NULL && strncmp(ptr, http_shtml, 6) == 0) {
       PT_INIT(&s->scriptpt);
       PT_WAIT_THREAD(&s->outputpt, handle_script(s));
     } else 
-#endif    
     {
       PT_WAIT_THREAD(&s->outputpt,
 		     send_file(s));

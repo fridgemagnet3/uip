@@ -341,7 +341,7 @@ int main(int argc, char *argv[] )
   
   fd_set fdset;
   int max_fd ;
-  uint8_t pktbuf[1500];
+  uint8_t pktbuf[1520];
   int rc ;
   
   // allow DHCP broadcast packets
