@@ -10,8 +10,7 @@ resolv		- builds and runs on the Dragon
 smtp		- builds and runs on the Dragon
 telnetd		- builds and runs on the Dragon
 webclient	- builds and runs on the Dragon
-webserver	- builds and runs on the Dragon but has issues with the script
- processor which is currently inhibited at compile time
+webserver	- builds and runs on the Dragon
 
 New apps added by me:
 

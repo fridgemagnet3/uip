@@ -152,7 +152,15 @@ defined(APP_DHCPC) || defined(APP_NTP)
  *
  * \hideinitializer
  */
+// stats only enabled if the webserver also is
+// since in the (current) demo configurations, that's 
+// the only thing that makes use of them so is a waste
+// of memory otherwise
+#ifndef APP_HTTPD
 #define UIP_CONF_STATISTICS      0
+#else
+#define UIP_CONF_STATISTICS      1
+#endif
 
 /**
  * Architecture specific overrides

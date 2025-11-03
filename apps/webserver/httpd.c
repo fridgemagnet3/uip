@@ -123,6 +123,8 @@ static void
 next_scriptstate(struct httpd_state *s)
 {
   char *p;
+  // !! watch this - the web documents must have a newline character at the end of
+  // the file otherwise this breaks !!
   p = strchr(s->scriptptr, ISO_nl) + 1;
   s->scriptlen -= (unsigned short)(p - s->scriptptr);
   s->scriptptr = p;
