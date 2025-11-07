@@ -304,6 +304,9 @@ handle_connection(struct httpd_state *s)
 void
 httpd_appcall(void)
 {
+  if ( uip_conn->lport != HTONS(80))
+    return ;
+
   struct httpd_state *s = (struct httpd_state *)&(uip_conn->appstate);
 
   if(uip_closed() || uip_aborted() || uip_timedout()) {

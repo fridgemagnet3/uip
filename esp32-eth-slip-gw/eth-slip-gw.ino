@@ -26,7 +26,7 @@
 #define SLIP_ESC_END 0334
 #define SLIP_ESC_ESC 0335
 
-#define MAX_SIZE 1500
+#define MAX_SIZE 1520
 
 static bool EthConnected = false ;
 // current MAC address of the SLIP client

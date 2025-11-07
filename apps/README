@@ -10,7 +10,10 @@ resolv		- builds and runs on the Dragon
 smtp		- builds and runs on the Dragon
 telnetd		- builds and runs on the Dragon
 webclient	- builds and runs on the Dragon
-webserver	- builds and runs on the Dragon
+webserver	- builds and runs on the Dragon. Enabling this app will 
+result in quite a large binary, you'll need to adjust the program
+origin address down to something like 0x1500 in the Makefile and 
+most likely won't be able to include any of the others at the same time
 
 New apps added by me:
 

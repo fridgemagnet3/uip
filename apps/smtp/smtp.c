@@ -199,6 +199,9 @@ PT_THREAD(smtp_thread(void))
 void
 smtp_appcall(void)
 {
+  if ( uip_conn->rport != HTONS(25))
+    return ;
+
   if(uip_closed()) {
     s.connected = 0;
     return;
