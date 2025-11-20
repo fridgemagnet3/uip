@@ -92,11 +92,11 @@ You'll also need [the XRoar emulator](https://github.com/fridgemagnet3/xroar). U
 
 Every character then written to the serial port on the Dragon, will then be sent to the **tx_uart** file. Anything sent to the **rx_uart** file from the Linux side will then appear on the serial port. 
 
-You then need to load the uIP binary image into the emulator. There are various ways of accomplishing this, including writing it to a virtual disk image, for ease of use I use an instance of Drivewire with the [Becker port](https://www.6809.org.uk/xroar/doc/xroar.shtml#Becker-port-options), it then just a case of loading it from the server:
+You then need to load the uIP image into the emulator, the simplest way to accomplish this is to pass the name of binary file on the command line:
 
-`DLOAD "UIP.BIN`
+`xroar UIP.BIN`
 
-That last command loads, then runs the application.
+which will then load and automatically run the executable.
 
 Next you'll need to build (under Linux) the [tap-slip-gw application](/tap-slip-gw):
 
